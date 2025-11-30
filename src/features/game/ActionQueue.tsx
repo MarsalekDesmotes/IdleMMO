@@ -44,6 +44,44 @@ const JOB_ACTIONS: Action[] = [
             { type: 'gold', value: 10 }
         ]
     },
+    {
+        id: 'forage_herbs',
+        name: 'Forage Herbs',
+        description: 'Gather medicinal herbs from the forest.',
+        duration: 7,
+        staminaCost: 12,
+        requiredZone: 'outskirts',
+        rewards: [
+            { type: 'xp', value: 6 },
+            { type: 'gold', value: 5 },
+            { type: 'resource', resourceId: 'wood', value: 3 }
+        ]
+    },
+    {
+        id: 'help_villagers',
+        name: 'Help Villagers',
+        description: 'Assist the local villagers with daily tasks.',
+        duration: 12,
+        staminaCost: 18,
+        requiredZone: 'outskirts',
+        rewards: [
+            { type: 'xp', value: 20 },
+            { type: 'gold', value: 15 }
+        ]
+    },
+    {
+        id: 'gather_stones',
+        name: 'Gather Stones',
+        description: 'Collect stones from the riverbed.',
+        duration: 6,
+        staminaCost: 10,
+        requiredZone: 'outskirts',
+        rewards: [
+            { type: 'xp', value: 5 },
+            { type: 'gold', value: 3 },
+            { type: 'resource', resourceId: 'stone', value: 5 }
+        ]
+    },
 
     // Global / Building Actions
     {
@@ -98,6 +136,70 @@ const JOB_ACTIONS: Action[] = [
         rewards: [
             { type: 'xp', value: 100 },
             { type: 'resource', resourceId: 'tech', value: 10 }
+        ]
+    },
+    {
+        id: 'mine_iron_ore',
+        name: 'Mine Iron Ore',
+        description: 'Extract valuable iron ore from the mountains.',
+        duration: 20,
+        staminaCost: 35,
+        requiredZone: 'iron_hills',
+        rewards: [
+            { type: 'xp', value: 35 },
+            { type: 'gold', value: 25 },
+            { type: 'resource', resourceId: 'stone', value: 15 }
+        ]
+    },
+    {
+        id: 'explore_ruins',
+        name: 'Explore Ancient Ruins',
+        description: 'Discover secrets in the old ruins.',
+        duration: 30,
+        staminaCost: 40,
+        requiredZone: 'iron_hills',
+        rewards: [
+            { type: 'xp', value: 60 },
+            { type: 'gold', value: 30 },
+            { type: 'resource', resourceId: 'tech', value: 8 }
+        ]
+    },
+    {
+        id: 'hunt_wolves',
+        name: 'Hunt Mountain Wolves',
+        description: 'Protect travelers from dangerous wolves.',
+        duration: 18,
+        staminaCost: 30,
+        requiredZone: 'iron_hills',
+        rewards: [
+            { type: 'xp', value: 40 },
+            { type: 'gold', value: 35 }
+        ]
+    },
+    {
+        id: 'lumbermill_work',
+        name: 'Work at Lumbermill',
+        description: 'Process wood at the lumbermill.',
+        duration: 15,
+        staminaCost: 22,
+        requiredBuilding: { type: 'lumberMill', level: 1 },
+        rewards: [
+            { type: 'xp', value: 25 },
+            { type: 'gold', value: 20 },
+            { type: 'resource', resourceId: 'wood', value: 10 }
+        ]
+    },
+    {
+        id: 'mine_work',
+        name: 'Work at Mine',
+        description: 'Extract resources from the mine.',
+        duration: 18,
+        staminaCost: 25,
+        requiredBuilding: { type: 'mine', level: 1 },
+        rewards: [
+            { type: 'xp', value: 30 },
+            { type: 'gold', value: 25 },
+            { type: 'resource', resourceId: 'stone', value: 12 }
         ]
     }
 ]

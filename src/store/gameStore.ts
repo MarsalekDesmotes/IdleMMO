@@ -51,7 +51,7 @@ export interface Quest {
     isCompleted: boolean
     status: 'active' | 'completed'
     requirements: {
-        type: 'resource' | 'level' | 'kill'
+        type: 'resource' | 'level' | 'kill' | 'item'
         target: string
         amount: number
         current: number
@@ -171,7 +171,7 @@ export interface GameState {
 
     // Quests & NPCs
     acceptQuest: (quest: { id: string }) => void
-    updateQuestProgress: (type: 'resource' | 'level' | 'kill', target: string, amount: number) => void
+    updateQuestProgress: (type: 'resource' | 'level' | 'kill' | 'item', target: string, amount: number) => void
     completeQuest: (questId: string) => void
 
     // Cloud Sync
@@ -204,6 +204,60 @@ const INITIAL_QUESTS: Quest[] = [
         status: 'active',
         requirements: [{ type: 'kill', target: 'Giant Rat', amount: 5, current: 0 }],
         rewards: { xp: 100, gold: 25, items: [{ itemId: 'potion_health', amount: 2 }] }
+    },
+    {
+        id: 'q3',
+        title: 'Stone Quarry',
+        description: 'Mine 20 pieces of Stone for construction.',
+        isCompleted: false,
+        status: 'active',
+        requirements: [{ type: 'resource', target: 'stone', amount: 20, current: 0 }],
+        rewards: { xp: 80, gold: 30 }
+    },
+    {
+        id: 'q4',
+        title: 'First Weapon',
+        description: 'Craft your first Iron Sword.',
+        isCompleted: false,
+        status: 'active',
+        requirements: [{ type: 'item', target: 'iron_sword', amount: 1, current: 0 }],
+        rewards: { xp: 150, gold: 50 }
+    },
+    {
+        id: 'q5',
+        title: 'Level Up',
+        description: 'Reach level 5 to unlock new skills.',
+        isCompleted: false,
+        status: 'active',
+        requirements: [{ type: 'level', target: '5', amount: 5, current: 0 }],
+        rewards: { xp: 200, gold: 100 }
+    },
+    {
+        id: 'q6',
+        title: 'Mountain Explorer',
+        description: 'Reach Iron Hills and explore the ancient ruins.',
+        isCompleted: false,
+        status: 'active',
+        requirements: [{ type: 'level', target: '20', amount: 20, current: 0 }],
+        rewards: { xp: 500, gold: 200 }
+    },
+    {
+        id: 'q7',
+        title: 'Tech Collector',
+        description: 'Gather 50 Tech points for advanced research.',
+        isCompleted: false,
+        status: 'active',
+        requirements: [{ type: 'resource', target: 'tech', amount: 50, current: 0 }],
+        rewards: { xp: 300, gold: 150 }
+    },
+    {
+        id: 'q8',
+        title: 'Goblin Hunter',
+        description: 'Defeat 10 Goblins to clear the area.',
+        isCompleted: false,
+        status: 'active',
+        requirements: [{ type: 'kill', target: 'Goblin Scout', amount: 10, current: 0 }],
+        rewards: { xp: 400, gold: 180, items: [{ itemId: 'potion_health', amount: 5 }] }
     }
 ]
 
@@ -218,7 +272,7 @@ const INITIAL_NPCS: NPC[] = [
             "Welcome to our village, traveler.",
             "We are in dire need of resources. Can you help us?"
         ],
-        quests: [{ id: 'q1' }],
+        quests: [{ id: 'q1' }, { id: 'q3' }],
         zone: 'outskirts'
     },
     {
@@ -231,8 +285,47 @@ const INITIAL_NPCS: NPC[] = [
             "Keep your weapon sharp.",
             "The rats are getting bold lately."
         ],
-        quests: [{ id: 'q2' }],
+        quests: [{ id: 'q2' }, { id: 'q8' }],
         zone: 'outskirts'
+    },
+    {
+        id: 'npc3',
+        name: 'Master Smith Thrain',
+        role: 'Master Blacksmith',
+        title: 'Master Blacksmith',
+        description: 'The finest craftsman in the realm.',
+        dialogue: [
+            "Fine steel requires fine hands.",
+            "Bring me the materials, and I'll forge you a weapon worthy of legend."
+        ],
+        quests: [{ id: 'q4' }],
+        zone: 'outskirts'
+    },
+    {
+        id: 'npc4',
+        name: 'Sage Lyra',
+        role: 'Wise Scholar',
+        title: 'Wise Scholar',
+        description: 'A scholar studying the ancient arts.',
+        dialogue: [
+            "Knowledge is power, young adventurer.",
+            "The path of growth requires dedication and wisdom."
+        ],
+        quests: [{ id: 'q5' }],
+        zone: 'outskirts'
+    },
+    {
+        id: 'npc5',
+        name: 'Explorer Kael',
+        role: 'Mountain Guide',
+        title: 'Mountain Guide',
+        description: 'An experienced explorer of the Iron Hills.',
+        dialogue: [
+            "The mountains hold many secrets.",
+            "Only the brave dare venture into the Iron Hills."
+        ],
+        quests: [{ id: 'q6' }, { id: 'q7' }],
+        zone: 'iron_hills'
     }
 ]
 
@@ -424,6 +517,8 @@ export const useGameStore = create<GameState>()(
 
                     return { character: { ...state.character, inventory: newInventory } }
                 })
+                // Update quest progress for item type quests
+                get().updateQuestProgress('item', item.id, count)
             },
 
             removeItem: (itemId, count = 1) => {
@@ -514,18 +609,83 @@ export const useGameStore = create<GameState>()(
                 const { character } = get()
                 if (!character) return
 
-                // Check ingredients
+                // Check if can afford gold
+                if (recipe.goldCost && character.gold < recipe.goldCost) {
+                    get().addLog(`Not enough gold. Required: ${recipe.goldCost}`, 'error')
+                    return
+                }
+
+                // Check ingredients (resources and inventory items)
                 for (const ing of recipe.ingredients) {
-                    const invItem = character.inventory.find(i => i.item.id === ing.itemId)
-                    if (!invItem || invItem.count < ing.amount) {
-                        get().addLog(`Missing ingredients: ${ing.itemId}`, 'error')
-                        return
+                    if (ing.itemId === 'wood') {
+                        if (character.resources.wood < ing.amount) {
+                            get().addLog(`Missing ingredients: Wood (need ${ing.amount}, have ${character.resources.wood})`, 'error')
+                            return
+                        }
+                    } else if (ing.itemId === 'stone') {
+                        if (character.resources.stone < ing.amount) {
+                            get().addLog(`Missing ingredients: Stone (need ${ing.amount}, have ${character.resources.stone})`, 'error')
+                            return
+                        }
+                    } else if (ing.itemId === 'tech') {
+                        if (character.resources.tech < ing.amount) {
+                            get().addLog(`Missing ingredients: Tech (need ${ing.amount}, have ${character.resources.tech})`, 'error')
+                            return
+                        }
+                    } else {
+                        const invItem = character.inventory.find(i => i.item.id === ing.itemId)
+                        if (!invItem || invItem.count < ing.amount) {
+                            get().addLog(`Missing ingredients: ${ing.itemId}`, 'error')
+                            return
+                        }
                     }
+                }
+
+                // Consume gold
+                if (recipe.goldCost) {
+                    set((state) => ({
+                        character: state.character ? {
+                            ...state.character,
+                            gold: state.character.gold - recipe.goldCost!
+                        } : null
+                    }))
                 }
 
                 // Consume ingredients
                 recipe.ingredients.forEach(ing => {
-                    get().removeItem(ing.itemId, ing.amount)
+                    if (ing.itemId === 'wood') {
+                        set((state) => ({
+                            character: state.character ? {
+                                ...state.character,
+                                resources: {
+                                    ...state.character.resources,
+                                    wood: state.character.resources.wood - ing.amount
+                                }
+                            } : null
+                        }))
+                    } else if (ing.itemId === 'stone') {
+                        set((state) => ({
+                            character: state.character ? {
+                                ...state.character,
+                                resources: {
+                                    ...state.character.resources,
+                                    stone: state.character.resources.stone - ing.amount
+                                }
+                            } : null
+                        }))
+                    } else if (ing.itemId === 'tech') {
+                        set((state) => ({
+                            character: state.character ? {
+                                ...state.character,
+                                resources: {
+                                    ...state.character.resources,
+                                    tech: state.character.resources.tech - ing.amount
+                                }
+                            } : null
+                        }))
+                    } else {
+                        get().removeItem(ing.itemId, ing.amount)
+                    }
                 })
 
                 // Add result
@@ -545,10 +705,13 @@ export const useGameStore = create<GameState>()(
 
                     if (newXp >= newMaxXp) {
                         newXp -= newMaxXp
+                        const oldLevel = newLevel
                         newLevel++
                         newMaxXp = Math.floor(newMaxXp * 1.5)
                         newSkillPoints++
                         get().addLog(`Level Up! You are now level ${newLevel}.`, 'success')
+                        // Update quest progress for level type quests
+                        get().updateQuestProgress('level', newLevel.toString(), 1)
                     }
 
                     return {

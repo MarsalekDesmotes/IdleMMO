@@ -5,6 +5,7 @@ import { useUIStore } from "@/store/uiStore"
 import { useEventStore } from "@/store/eventStore"
 import { ActionQueue } from "@/features/game/ActionQueue"
 import { ActiveAction } from "@/features/game/ActiveAction"
+import { GameLog } from "@/features/game/GameLog"
 import { InventoryGrid } from "@/features/inventory/InventoryGrid"
 import { EquipmentSlots } from "@/features/inventory/EquipmentSlots"
 import { CraftingView } from "@/features/crafting/CraftingView"
@@ -60,7 +61,7 @@ function App() {
               <ActionQueue />
             </div>
             <div className="space-y-6">
-              {/* Right Sidebar content if any */}
+              <GameLog />
             </div>
           </div>
         )}

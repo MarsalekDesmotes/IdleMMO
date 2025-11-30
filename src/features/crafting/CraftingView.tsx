@@ -1,7 +1,7 @@
 import { useGameStore, type Recipe } from "@/store/gameStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Hammer, Lock, Shield, Sword } from "lucide-react"
+import { Hammer, Lock, Shield, Sword, Mail, Helmet, Wand2, Scroll } from "lucide-react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 const RECIPES: Recipe[] = [
@@ -71,6 +71,116 @@ const RECIPES: Recipe[] = [
             value: 100,
             stats: { attack: 4 }
         }
+    },
+    {
+        id: 'iron_helmet',
+        name: 'Iron Helmet',
+        description: 'Protective headgear.',
+        goldCost: 60,
+        ingredients: [
+            { itemId: 'wood', amount: 15 },
+            { itemId: 'stone', amount: 35 }
+        ],
+        requiredBuilding: 'blacksmith',
+        requiredBuildingLevel: 1,
+        craftingTime: 10,
+        xpReward: 25,
+        result: {
+            id: 'iron_helmet',
+            name: 'Iron Helmet',
+            type: 'equipment',
+            subtype: 'head',
+            value: 60,
+            stats: { defense: 4 }
+        }
+    },
+    {
+        id: 'iron_armor',
+        name: 'Iron Armor',
+        description: 'Sturdy body protection.',
+        goldCost: 80,
+        ingredients: [
+            { itemId: 'wood', amount: 25 },
+            { itemId: 'stone', amount: 50 }
+        ],
+        requiredBuilding: 'blacksmith',
+        requiredBuildingLevel: 1,
+        craftingTime: 15,
+        xpReward: 30,
+        result: {
+            id: 'iron_armor',
+            name: 'Iron Armor',
+            type: 'equipment',
+            subtype: 'body',
+            value: 80,
+            stats: { defense: 6 }
+        }
+    },
+    {
+        id: 'steel_sword',
+        name: 'Steel Sword',
+        description: 'A powerful blade forged from steel.',
+        goldCost: 150,
+        ingredients: [
+            { itemId: 'wood', amount: 40 },
+            { itemId: 'stone', amount: 80 },
+            { itemId: 'tech', amount: 15 }
+        ],
+        requiredBuilding: 'blacksmith',
+        requiredBuildingLevel: 2,
+        craftingTime: 25,
+        xpReward: 75,
+        result: {
+            id: 'steel_sword',
+            name: 'Steel Sword',
+            type: 'equipment',
+            subtype: 'weapon',
+            value: 150,
+            stats: { attack: 10 }
+        }
+    },
+    {
+        id: 'mana_crystal',
+        name: 'Mana Crystal',
+        description: 'A crystal infused with arcane energy.',
+        goldCost: 120,
+        ingredients: [
+            { itemId: 'stone', amount: 60 },
+            { itemId: 'tech', amount: 20 }
+        ],
+        requiredBuilding: 'library',
+        requiredBuildingLevel: 1,
+        craftingTime: 30,
+        xpReward: 60,
+        result: {
+            id: 'mana_crystal',
+            name: 'Mana Crystal',
+            type: 'equipment',
+            subtype: 'hands',
+            value: 120,
+            stats: { attack: 3, defense: 2 }
+        }
+    },
+    {
+        id: 'ancient_scroll',
+        name: 'Ancient Scroll',
+        description: 'A scroll with forgotten knowledge.',
+        goldCost: 200,
+        ingredients: [
+            { itemId: 'wood', amount: 30 },
+            { itemId: 'tech', amount: 50 }
+        ],
+        requiredBuilding: 'library',
+        requiredBuildingLevel: 2,
+        craftingTime: 40,
+        xpReward: 100,
+        result: {
+            id: 'ancient_scroll',
+            name: 'Ancient Scroll',
+            type: 'material',
+            value: 200,
+            description: 'Contains ancient wisdom'
+        }
     }
 ]
 
@@ -107,7 +217,11 @@ export function CraftingView() {
                                     <span className="flex items-center gap-2">
                                         {recipe.id.includes('sword') ? <Sword className="h-4 w-4" /> :
                                             recipe.id.includes('shield') ? <Shield className="h-4 w-4" /> :
-                                                <Hammer className="h-4 w-4" />}
+                                                recipe.id.includes('helmet') ? <Helmet className="h-4 w-4" /> :
+                                                    recipe.id.includes('armor') ? <Mail className="h-4 w-4" /> :
+                                                        recipe.id.includes('crystal') ? <Wand2 className="h-4 w-4" /> :
+                                                            recipe.id.includes('scroll') ? <Scroll className="h-4 w-4" /> :
+                                                                <Hammer className="h-4 w-4" />}
                                         {recipe.name}
                                     </span>
                                     {!isBuildingMet && <Lock className="h-4 w-4 text-muted-foreground" />}
