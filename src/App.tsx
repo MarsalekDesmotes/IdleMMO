@@ -11,14 +11,13 @@ import { CraftingView } from "@/features/crafting/CraftingView"
 import { CombatView } from "@/features/combat/CombatView"
 import { SkillTree } from "@/features/character/SkillTree"
 import { NPCView } from "@/features/world/NPCView"
+import { MapView } from "@/features/map/MapView"
+import { KingdomView } from "@/features/kingdom/KingdomView"
+import { ChatView } from "@/features/chat/ChatView"
 import { DebugPanel } from "@/components/debug/DebugPanel"
 import { ResourceHeader } from "@/components/layout/ResourceHeader"
 import { AppShell } from "@/components/layout/AppShell"
 import { EventBanner } from "@/components/game/EventBanner"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { AvatarSelection } from "@/features/character/AvatarSelection"
 import { AuthPage } from "@/features/auth/AuthPage"
 
@@ -87,6 +86,18 @@ function App() {
 
         {currentView === 'skills' && (
           <SkillTree />
+        )}
+
+        {currentView === 'map' && (
+          <MapView />
+        )}
+
+        {currentView === 'kingdom' && (
+          <KingdomView />
+        )}
+
+        {currentView === 'chat' && (
+          <ChatView />
         )}
       </div>
 

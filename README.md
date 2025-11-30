@@ -1,73 +1,114 @@
-# React + TypeScript + Vite
+# IdleAgeMMO
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Browser tabanlı idle/incremental MMO oyunu. Karakter oluştur, görevler ver, kaynak topla, craft yap, savaş ve krallığını geliştir!
 
-Currently, two official plugins are available:
+## 🎮 Oyun Hakkında
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+IdleAgeMMO, idle mekanikleri ve aktif oynanışı birleştiren bir MMO oyunudur. Oyuncular karakterlerini oluşturur, görevleri kuyruğa ekler, kaynak toplar, ekipman craft'lar ve düşmanlarla savaşır. Oyun, tarayıcı kapalıyken bile ilerlemeye devam eden idle mekanikleriyle sürekli ilerleme sağlar.
 
-## React Compiler
+## ✨ Özellikler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **3 Karakter Sınıfı:** Paladin, Archmage, Ranger
+- **Idle Action Queue:** Görevleri kuyruğa ekle, otomatik tamamlansın
+- **Turn-Based Combat:** Sınıfa özel skill'lerle savaş
+- **Crafting System:** Kaynaklarla ekipman üret
+- **Kingdom Building:** Binalar inşa et ve upgrade et
+- **Quest System:** NPC'lerden görev al, ödüller kazan
+- **Skill Tree:** Her sınıf için özel skill ağacı
+- **Global Chat:** Diğer oyuncularla gerçek zamanlı sohbet
+- **Cloud Save:** İlerlemeni bulutta sakla
 
-## Expanding the ESLint configuration
+## 🚀 Başlangıç
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Gereksinimler
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 18+
+- npm veya yarn
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Kurulum
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Bağımlılıkları yükle
+npm install
+
+# Development server'ı başlat
+npm run dev
+
+# Build al
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Environment Variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+`.env` dosyası oluşturun:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
+
+## 📚 Dokümantasyon
+
+Detaylı oyun tasarım dokümantasyonu için: **[GDD.md](./GDD.md)**
+
+## 🛠️ Teknoloji Stack
+
+- **Frontend:** React 19.2.0 + TypeScript
+- **State Management:** Zustand
+- **Styling:** Tailwind CSS
+- **UI Components:** Radix UI
+- **Backend:** Supabase
+- **Real-time:** Supabase Realtime
+- **Build Tool:** Vite
+
+## 📖 Oyun Mekanikleri
+
+### Action Queue System
+Görevleri kuyruğa ekleyin ve otomatik tamamlanmalarını izleyin. Her görev stamina tüketir ve XP, Gold, kaynaklar kazandırır.
+
+### Combat System
+Turn-based combat sistemi. Her sınıfın kendine özel skill'leri var. Düşmanlar oyuncu seviyesine göre ölçeklenir.
+
+### Progression
+- Level atlama
+- Skill unlock
+- Equipment crafting
+- Building upgrades
+
+## 🎯 Mevcut Özellikler
+
+✅ Karakter oluşturma (3 sınıf)  
+✅ Action queue sistemi  
+✅ Idle progression  
+✅ Combat sistemi  
+✅ Skill tree (12 skill)  
+✅ Inventory & Equipment  
+✅ Crafting (3 recipe)  
+✅ Map & Zone travel  
+✅ Kingdom building (3 bina)  
+✅ Quest sistemi  
+✅ NPC'ler  
+✅ Event sistemi  
+✅ Global chat  
+✅ Cloud save  
+
+## 🔮 Gelecek Özellikler
+
+- Daha fazla zone ve quest
+- Guild/Clan sistemi
+- Trading sistemi
+- Leaderboards
+- Prestige sistemi
+- Dungeons ve boss battles
+
+## 📝 Lisans
+
+Bu proje özel bir projedir.
+
+## 🤝 Katkıda Bulunma
+
+Katkılarınızı bekliyoruz! Lütfen pull request gönderin.
+
+---
+
+**Daha fazla bilgi için:** [GDD.md](./GDD.md)
