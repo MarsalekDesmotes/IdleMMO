@@ -1,7 +1,7 @@
 import { useGameStore, type ZoneId } from "@/store/gameStore"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MapPin, Mountain, Tent, RefreshCw } from "lucide-react"
+import { MapPin, Mountain, Tent, RefreshCw, Trees } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function MapView() {
@@ -59,7 +59,7 @@ export function MapView() {
 
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <ZoneCard
                     id="outskirts"
                     name="The Outskirts"
@@ -73,6 +73,13 @@ export function MapView() {
                     levelRange="20-40"
                     description="Rugged terrain rich in minerals. Home to the Temple of Rebirth."
                     icon={Mountain}
+                />
+                <ZoneCard
+                    id="dark_forest"
+                    name="Dark Forest"
+                    levelRange="40-60"
+                    description="A mysterious forest shrouded in ancient magic. Dangerous but rewarding for the brave."
+                    icon={Trees}
                 />
             </div>
 

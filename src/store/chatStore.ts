@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseAvailable } from '@/lib/supabase'
 import { useAuthStore } from './authStore'
 
 export interface ChatMessage {
@@ -23,22 +23,36 @@ export const useChatStore = create<ChatState>((set) => ({
     isLoading: false,
 
     subscribe: () => {
+        if (!isSupabaseAvailable()) {
+            set({ isLoading: false, messages: [] })
+            return () => {}
+        }
+
         set({ isLoading: true })
 
         // Fetch initial messages
-        supabase
+        supabase!
             .from('chat_messages')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(50)
-            .then(({ data }) => {
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error('Failed to load chat messages:', error)
+                    set({ isLoading: false })
+                    return
+                }
                 if (data) {
                     set({ messages: data.reverse() as ChatMessage[], isLoading: false })
                 }
             })
+            .catch((error) => {
+                console.error('Chat subscription error:', error)
+                set({ isLoading: false })
+            })
 
         // Subscribe to new messages
-        const channel = supabase
+        const channel = supabase!
             .channel('public:chat_messages')
             .on(
                 'postgres_changes',
@@ -53,29 +67,49 @@ export const useChatStore = create<ChatState>((set) => ({
             .subscribe()
 
         return () => {
-            supabase.removeChannel(channel)
+            if (isSupabaseAvailable()) {
+                supabase!.removeChannel(channel)
+            }
         }
     },
 
     unsubscribe: () => {
-        supabase.removeAllChannels()
+        if (isSupabaseAvailable()) {
+            supabase!.removeAllChannels()
+        }
     },
 
     sendMessage: async (content: string) => {
+        if (!isSupabaseAvailable()) {
+            console.warn('Chat not available - Supabase not configured')
+            return
+        }
+
         const { user } = useAuthStore.getState()
-        if (!user) return
+        if (!user) {
+            console.warn('Cannot send message - user not authenticated')
+            return
+        }
 
         // Get username from game store or auth metadata
         // For now, let's assume we can get it from the user metadata or just use "Player"
         // Ideally we'd fetch the profile, but let's just use email prefix for now if name missing
         const username = user.email?.split('@')[0] || 'Unknown'
 
-        await supabase
-            .from('chat_messages')
-            .insert({
-                user_id: user.id,
-                username: username,
-                content
-            })
+        try {
+            const { error } = await supabase!
+                .from('chat_messages')
+                .insert({
+                    user_id: user.id,
+                    username: username,
+                    content
+                })
+
+            if (error) {
+                console.error('Failed to send message:', error)
+            }
+        } catch (error) {
+            console.error('Error sending message:', error)
+        }
     }
 }))

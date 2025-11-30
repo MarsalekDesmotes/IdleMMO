@@ -15,16 +15,42 @@ export function CombatView() {
     const availableSkills = character ? SKILLS[character.class].filter(s => s.type === 'active' && character.unlockedSkills.includes(s.id)) : []
 
     const handleFindEnemy = () => {
+        const zoneEnemies: Record<string, Array<{ name: string; image: string; hpModifier: number; damageModifier: number }>> = {
+            outskirts: [
+                { name: 'Goblin Scout', image: '👺', hpModifier: 1, damageModifier: 1 },
+                { name: 'Giant Rat', image: '🐀', hpModifier: 0.8, damageModifier: 0.8 },
+                { name: 'Wild Boar', image: '🐗', hpModifier: 1.2, damageModifier: 1 }
+            ],
+            iron_hills: [
+                { name: 'Mountain Orc', image: '👹', hpModifier: 1.5, damageModifier: 1.2 },
+                { name: 'Stone Golem', image: '🗿', hpModifier: 2, damageModifier: 0.8 },
+                { name: 'Cave Troll', image: '👺', hpModifier: 1.8, damageModifier: 1.5 }
+            ],
+            dark_forest: [
+                { name: 'Shadow Creature', image: '👤', hpModifier: 1.3, damageModifier: 1.4 },
+                { name: 'Dark Wolf', image: '🐺', hpModifier: 1.1, damageModifier: 1.3 },
+                { name: 'Forest Wraith', image: '👻', hpModifier: 1.5, damageModifier: 1.2 }
+            ]
+        }
+
+        const zoneEnemyPool = zoneEnemies[character.currentZone] || zoneEnemies.outskirts
+        const randomEnemyData = zoneEnemyPool[Math.floor(Math.random() * zoneEnemyPool.length)]
+
+        const baseHp = 50 + (character.level * 10)
+        const baseDamage = 5 + character.level
+
         const randomEnemy = {
             id: `enemy_${Date.now()}`,
-            name: 'Goblin Scout',
+            name: randomEnemyData.name,
             level: character.level,
-            hp: 50 + (character.level * 10),
-            max_hp: 50 + (character.level * 10),
-            damage: 5 + character.level,
-            image: '👺'
+            hp: Math.floor(baseHp * randomEnemyData.hpModifier),
+            max_hp: Math.floor(baseHp * randomEnemyData.hpModifier),
+            damage: Math.floor(baseDamage * randomEnemyData.damageModifier),
+            image: randomEnemyData.image
         }
+
         startCombat(randomEnemy)
+        useGameStore.getState().updateQuestProgress('kill', randomEnemy.name, 1)
     }
 
     if (phase === 'idle') {

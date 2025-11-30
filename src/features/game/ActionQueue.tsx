@@ -201,6 +201,73 @@ const JOB_ACTIONS: Action[] = [
             { type: 'gold', value: 25 },
             { type: 'resource', resourceId: 'stone', value: 12 }
         ]
+    },
+    // Dark Forest Actions (Zone 3)
+    {
+        id: 'explore_dark_paths',
+        name: 'Explore Dark Paths',
+        description: 'Venture into the shadowy depths of the forest.',
+        duration: 35,
+        staminaCost: 45,
+        requiredZone: 'dark_forest',
+        rewards: [
+            { type: 'xp', value: 80 },
+            { type: 'gold', value: 50 },
+            { type: 'resource', resourceId: 'tech', value: 15 }
+        ]
+    },
+    {
+        id: 'harvest_magic_mushrooms',
+        name: 'Harvest Magic Mushrooms',
+        description: 'Collect rare magical fungi from the forest floor.',
+        duration: 25,
+        staminaCost: 35,
+        requiredZone: 'dark_forest',
+        rewards: [
+            { type: 'xp', value: 60 },
+            { type: 'gold', value: 40 },
+            { type: 'resource', resourceId: 'wood', value: 15 },
+            { type: 'resource', resourceId: 'tech', value: 10 }
+        ]
+    },
+    {
+        id: 'hunt_shadow_creatures',
+        name: 'Hunt Shadow Creatures',
+        description: 'Face the dark denizens of the forest.',
+        duration: 30,
+        staminaCost: 40,
+        requiredZone: 'dark_forest',
+        rewards: [
+            { type: 'xp', value: 100 },
+            { type: 'gold', value: 60 }
+        ]
+    },
+    {
+        id: 'collect_ancient_essence',
+        name: 'Collect Ancient Essence',
+        description: 'Gather powerful essence from ancient trees.',
+        duration: 40,
+        staminaCost: 50,
+        requiredZone: 'dark_forest',
+        rewards: [
+            { type: 'xp', value: 120 },
+            { type: 'gold', value: 70 },
+            { type: 'resource', resourceId: 'tech', value: 25 }
+        ]
+    },
+    {
+        id: 'study_dark_magic',
+        name: 'Study Dark Magic',
+        description: 'Learn forbidden knowledge from the forest.',
+        duration: 50,
+        staminaCost: 60,
+        requiredZone: 'dark_forest',
+        requiredBuilding: { type: 'library', level: 2 },
+        rewards: [
+            { type: 'xp', value: 150 },
+            { type: 'gold', value: 80 },
+            { type: 'resource', resourceId: 'tech', value: 30 }
+        ]
     }
 ]
 

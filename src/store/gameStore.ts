@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseAvailable, safeSupabaseCall } from '@/lib/supabase'
 import { SKILLS } from '@/data/skills'
 
 export type CharacterClass = 'Paladin' | 'Archmage' | 'Ranger'
-export type ZoneId = 'outskirts' | 'iron_hills' | 'zone1' | 'zone2'
+export type ZoneId = 'outskirts' | 'iron_hills' | 'dark_forest'
 export type Gender = 'male' | 'female'
 
 export interface Item {
@@ -258,6 +258,33 @@ const INITIAL_QUESTS: Quest[] = [
         status: 'active',
         requirements: [{ type: 'kill', target: 'Goblin Scout', amount: 10, current: 0 }],
         rewards: { xp: 400, gold: 180, items: [{ itemId: 'potion_health', amount: 5 }] }
+    },
+    {
+        id: 'q9',
+        title: 'Forest Explorer',
+        description: 'Reach the Dark Forest and uncover its secrets.',
+        isCompleted: false,
+        status: 'active',
+        requirements: [{ type: 'level', target: '40', amount: 40, current: 0 }],
+        rewards: { xp: 800, gold: 400 }
+    },
+    {
+        id: 'q10',
+        title: 'Shadow Hunter',
+        description: 'Defeat 15 Shadow Creatures in the Dark Forest.',
+        isCompleted: false,
+        status: 'active',
+        requirements: [{ type: 'kill', target: 'Shadow Creature', amount: 15, current: 0 }],
+        rewards: { xp: 1200, gold: 600, items: [{ itemId: 'potion_health', amount: 10 }] }
+    },
+    {
+        id: 'q11',
+        title: 'Ancient Knowledge',
+        description: 'Gather 100 Tech points through Dark Forest exploration.',
+        isCompleted: false,
+        status: 'active',
+        requirements: [{ type: 'resource', target: 'tech', amount: 100, current: 0 }],
+        rewards: { xp: 1000, gold: 500 }
     }
 ]
 
@@ -326,6 +353,32 @@ const INITIAL_NPCS: NPC[] = [
         ],
         quests: [{ id: 'q6' }, { id: 'q7' }],
         zone: 'iron_hills'
+    },
+    {
+        id: 'npc6',
+        name: 'Shadow Whisperer Valen',
+        role: 'Forest Guardian',
+        title: 'Forest Guardian',
+        description: 'A mysterious guardian who watches over the Dark Forest.',
+        dialogue: [
+            "The forest holds ancient power...",
+            "Only those strong enough can survive here."
+        ],
+        quests: [{ id: 'q9' }, { id: 'q10' }],
+        zone: 'dark_forest'
+    },
+    {
+        id: 'npc7',
+        name: 'Archmage Seraphine',
+        role: 'Master of Dark Arts',
+        title: 'Master of Dark Arts',
+        description: 'A powerful mage studying the dark magic of the forest.',
+        dialogue: [
+            "Dark magic requires great understanding.",
+            "Collect enough essence and I will teach you secrets."
+        ],
+        quests: [{ id: 'q11' }],
+        zone: 'dark_forest'
     }
 ]
 
@@ -916,14 +969,34 @@ export const useGameStore = create<GameState>()(
             },
 
             loadFromCloud: async () => {
-                const { data: { user } } = await supabase.auth.getUser()
-                if (!user) return
+                if (!isSupabaseAvailable()) {
+                    get().addLog('Cloud save not available - using local storage only', 'warning')
+                    return
+                }
 
-                const { data } = await supabase
-                    .from('profiles')
-                    .select('game_state')
-                    .eq('id', user.id)
-                    .single()
+                const userResult = await safeSupabaseCall(
+                    async (client) => {
+                        const { data: { user } } = await client.auth.getUser()
+                        return user
+                    },
+                    null,
+                    'Failed to get user for cloud load'
+                )
+
+                if (!userResult) return
+
+                const data = await safeSupabaseCall(
+                    async (client) => {
+                        const { data } = await client
+                            .from('profiles')
+                            .select('game_state')
+                            .eq('id', userResult.id)
+                            .single()
+                        return data
+                    },
+                    null,
+                    'Failed to load game from cloud'
+                )
 
                 if (data && data.game_state) {
                     set({ character: data.game_state as Character })
@@ -932,22 +1005,42 @@ export const useGameStore = create<GameState>()(
             },
 
             saveToCloud: async () => {
-                const { data: { user } } = await supabase.auth.getUser()
-                if (!user) return
+                if (!isSupabaseAvailable()) {
+                    return
+                }
+
+                const userResult = await safeSupabaseCall(
+                    async (client) => {
+                        const { data: { user } } = await client.auth.getUser()
+                        return user
+                    },
+                    null,
+                    'Failed to get user for cloud save'
+                )
+
+                if (!userResult) return
 
                 const state = get()
                 if (!state.character) return
 
-                const { error } = await supabase
-                    .from('profiles')
-                    .upsert({
-                        id: user.id,
-                        username: state.character.name,
-                        game_state: state.character as any,
-                        updated_at: new Date().toISOString()
-                    })
+                const error = await safeSupabaseCall(
+                    async (client) => {
+                        const { error } = await client
+                            .from('profiles')
+                            .upsert({
+                                id: userResult.id,
+                                username: state.character.name,
+                                game_state: state.character as any,
+                                updated_at: new Date().toISOString()
+                            })
+                        return error
+                    },
+                    null,
+                    'Failed to save game to cloud'
+                )
 
                 if (error) {
+                    get().addLog('Cloud save failed. Progress saved locally.', 'warning')
                     console.error('Save failed:', error)
                 }
             },
