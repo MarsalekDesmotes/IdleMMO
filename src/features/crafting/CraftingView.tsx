@@ -1,7 +1,7 @@
 import { useGameStore, type Recipe } from "@/store/gameStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Hammer, Lock, Shield, Sword, Mail, Helmet, Wand2, Scroll } from "lucide-react"
+import { Hammer, Lock, Shield, Sword, Mail, HardHat, Wand2, Scroll } from "lucide-react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 const RECIPES: Recipe[] = [
@@ -217,7 +217,7 @@ export function CraftingView() {
                                     <span className="flex items-center gap-2">
                                         {recipe.id.includes('sword') ? <Sword className="h-4 w-4" /> :
                                             recipe.id.includes('shield') ? <Shield className="h-4 w-4" /> :
-                                                recipe.id.includes('helmet') ? <Helmet className="h-4 w-4" /> :
+                                                recipe.id.includes('helmet') ? <HardHat className="h-4 w-4" /> :
                                                     recipe.id.includes('armor') ? <Mail className="h-4 w-4" /> :
                                                         recipe.id.includes('crystal') ? <Wand2 className="h-4 w-4" /> :
                                                             recipe.id.includes('scroll') ? <Scroll className="h-4 w-4" /> :

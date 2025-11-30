@@ -22,15 +22,22 @@ export function EventBanner() {
     if (!activeEvent) return null
 
     return (
-        <Alert className="mb-4 border-red-500/50 bg-red-950/20 text-red-500 animate-pulse">
-            <Flame className="h-4 w-4 text-red-500" />
-            <AlertTitle className="flex justify-between items-center">
-                <span>{activeEvent.name} Active!</span>
-                <span className="text-sm font-mono">{timeLeft}s</span>
+        <Alert className="mb-4 border-red-500/50 bg-red-950/20 text-red-500 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500/10 to-transparent animate-[shimmer_3s_ease-in-out_infinite]"></div>
+            <Flame className="h-4 w-4 text-red-500 relative z-10 animate-[bounce_2s_ease-in-out_infinite]" />
+            <AlertTitle className="flex justify-between items-center relative z-10">
+                <span className="font-bold">{activeEvent.name} Active!</span>
+                <span className="text-sm font-mono font-bold">{timeLeft}s</span>
             </AlertTitle>
-            <AlertDescription>
+            <AlertDescription className="relative z-10">
                 {activeEvent.description}
             </AlertDescription>
+            <style>{`
+                @keyframes shimmer {
+                    0%, 100% { transform: translateX(-100%); }
+                    50% { transform: translateX(100%); }
+                }
+            `}</style>
         </Alert>
     )
 }

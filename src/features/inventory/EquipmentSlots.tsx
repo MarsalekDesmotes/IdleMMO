@@ -12,26 +12,24 @@ export function EquipmentSlots() {
         const item = character.equipment[slot]
 
         return (
-            <div className="flex flex-col items-center gap-2">
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/10">
+            <div className="flex flex-col items-center gap-1.5">
+                <div className="relative w-16 h-16 flex items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/10">
                     {item ? (
-                        <div className="absolute inset-0 p-1 flex flex-col items-center justify-center">
+                        <div className="w-full h-full flex flex-col items-center justify-center">
                             {item.subtype === 'weapon' ? <Sword className="h-8 w-8 text-primary" /> :
                                 item.subtype === 'head' ? <HardHat className="h-8 w-8 text-primary" /> :
                                     item.subtype === 'body' ? <Shirt className="h-8 w-8 text-primary" /> :
-                                        <Icon className="h-8 w-8 text-primary" />}
-                            <div className="mt-1 flex h-full w-full items-center justify-center rounded bg-accent/50 text-[10px] font-bold text-center p-1 truncate">
-                                {item.name}
-                            </div>
+                                        item.subtype === 'hands' ? <Shield className="h-8 w-8 text-primary" /> :
+                                            <Icon className="h-8 w-8 text-primary" />}
                         </div>
                     ) : (
-                        <Icon className="h-8 w-8 text-muted-foreground/50" />
+                        <Icon className="h-8 w-8 text-muted-foreground/30" />
                     )}
                 </div>
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
                 {item && (
-                    <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={() => unequipItem(slot)}>
-                        Unequip
+                    <Button variant="ghost" size="sm" className="h-5 text-[9px] px-2" onClick={() => unequipItem(slot)}>
+                        Remove
                     </Button>
                 )}
             </div>

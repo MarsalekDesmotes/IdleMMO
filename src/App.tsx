@@ -15,6 +15,8 @@ import { NPCView } from "@/features/world/NPCView"
 import { MapView } from "@/features/map/MapView"
 import { KingdomView } from "@/features/kingdom/KingdomView"
 import { ChatView } from "@/features/chat/ChatView"
+import { DailyQuests } from "@/features/quests/DailyQuests"
+import { HourlyReward } from "@/features/rewards/HourlyReward"
 import { DebugPanel } from "@/components/debug/DebugPanel"
 import { ResourceHeader } from "@/components/layout/ResourceHeader"
 import { AppShell } from "@/components/layout/AppShell"
@@ -24,20 +26,21 @@ import { AuthPage } from "@/features/auth/AuthPage"
 
 function App() {
   const { user, isGuest } = useAuthStore()
-  const { character, regenerateStamina, regenerateHp } = useGameStore()
+  const { character, regenerateStamina, regenerateHp, processAutoResources } = useGameStore()
   const { checkForEvent } = useEventStore()
   const { currentView } = useUIStore()
 
-  // Stamina, HP, and Event Loop
+  // Stamina, HP, Event Loop, and Auto Resource Processing
   useEffect(() => {
     if (!character) return
     const interval = setInterval(() => {
       regenerateStamina(1)
       regenerateHp(0.5)
       checkForEvent()
+      processAutoResources()
     }, 1000)
     return () => clearInterval(interval)
-  }, [character, regenerateStamina, regenerateHp, checkForEvent])
+  }, [character, regenerateStamina, regenerateHp, checkForEvent, processAutoResources])
 
   if (!user && !isGuest) {
     return <AuthPage />
@@ -61,6 +64,8 @@ function App() {
               <ActionQueue />
             </div>
             <div className="space-y-6">
+              <HourlyReward />
+              <DailyQuests />
               <GameLog />
             </div>
           </div>

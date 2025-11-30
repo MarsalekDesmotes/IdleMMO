@@ -16,7 +16,7 @@ export function Sidebar() {
         { id: 'crafting', label: 'Crafting', icon: Hammer, minLevel: 1 },
         { id: 'map', label: 'Map', icon: Map, minLevel: 1 },
         { id: 'world', label: 'World', icon: Globe, minLevel: 1 },
-        { id: 'kingdom', label: 'Kingdom', icon: Castle, minLevel: 5 },
+        { id: 'kingdom', label: 'Kingdom', icon: Castle, minLevel: 3 },
     ]
 
     return (

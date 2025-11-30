@@ -50,6 +50,7 @@ export interface Quest {
     description: string
     isCompleted: boolean
     status: 'active' | 'completed'
+    isDaily?: boolean
     requirements: {
         type: 'resource' | 'level' | 'kill' | 'item'
         target: string
@@ -93,6 +94,8 @@ export interface Character {
     max_hp: number
     stamina: number
     max_stamina: number
+    mana?: number
+    max_mana?: number
     gold: number
     resources: {
         wood: number
@@ -108,6 +111,12 @@ export interface Character {
     skillPoints: number
     gender: Gender
     customAvatar?: string
+    workers: {
+        woodsman: number
+        miner: number
+        researcher: number
+    }
+    maxPopulation: number
 }
 
 export interface Action {
@@ -163,6 +172,9 @@ export interface GameState {
     constructBuilding: (type: keyof Buildings, cost?: { credits: number, wood: number, stone: number }) => void
     travelToZone: (zoneId: ZoneId) => void
     resetClass: (newClass: CharacterClass) => void
+    hireWorker: (workerType: 'woodsman' | 'miner' | 'researcher') => void
+    fireWorker: (workerType: 'woodsman' | 'miner' | 'researcher') => void
+    processAutoResources: () => void
 
     // Stats
     regenerateStamina: (amount: number) => void
@@ -394,9 +406,9 @@ export const useGameStore = create<GameState>()(
 
             createCharacter: (name, charClass, gender, avatar) => {
                 const initialStats = {
-                    Paladin: { hp: 120, max_hp: 120, stamina: 100, max_stamina: 100 },
-                    Archmage: { hp: 80, max_hp: 80, stamina: 80, max_stamina: 80 },
-                    Ranger: { hp: 100, max_hp: 100, stamina: 120, max_stamina: 120 },
+                    Paladin: { hp: 120, max_hp: 120, stamina: 100, max_stamina: 100, mana: 50, max_mana: 50 },
+                    Archmage: { hp: 80, max_hp: 80, stamina: 80, max_stamina: 80, mana: 150, max_mana: 150 },
+                    Ranger: { hp: 100, max_hp: 100, stamina: 120, max_stamina: 120, mana: 75, max_mana: 75 },
                 }
 
                 set({
@@ -410,13 +422,15 @@ export const useGameStore = create<GameState>()(
                         resources: { wood: 0, stone: 0, tech: 0 },
                         buildings: { townHall: 1, lumberMill: 0, mine: 0, blacksmith: 0, library: 0 },
                         currentZone: 'outskirts',
-                        maxQueueSlots: 3,
+                        maxQueueSlots: 3, // Base slots
                         inventory: [],
                         equipment: { head: null, body: null, hands: null, weapon: null },
                         unlockedSkills: [],
                         skillPoints: 0,
                         gender,
                         customAvatar: avatar,
+                        workers: { woodsman: 0, miner: 0, researcher: 0 },
+                        maxPopulation: 5, // Base population limit (Town Hall level 1)
                         ...initialStats[charClass]
                     },
                     logs: [{ id: crypto.randomUUID(), message: `Character ${name} created.`, type: 'success', timestamp: Date.now() }]
@@ -502,6 +516,7 @@ export const useGameStore = create<GameState>()(
 
                 if (action.resourceReward) {
                     resourcesGained[action.resourceReward.resource] += action.resourceReward.amount
+                    get().updateQuestProgress('resource', action.resourceReward.resource, action.resourceReward.amount)
                     logMessage += ` +${action.resourceReward.amount} ${action.resourceReward.resource}`
                 }
 
@@ -509,11 +524,18 @@ export const useGameStore = create<GameState>()(
                     if (reward.type === 'xp') {
                         xpGained += reward.value
                         logMessage += ` +${reward.value} XP`
-                    } else if (reward.type === 'gold') {
+                    } else                     if (reward.type === 'gold') {
                         goldGained += reward.value
+                        // Track daily quest gold earned
+                        import('./dailyQuestStore').then(({ useDailyQuestStore }) => {
+                            useDailyQuestStore.getState().updateDailyQuestProgress('resource', 'gold_earned', reward.value)
+                        }).catch(() => {
+                            // Daily quest store not available
+                        })
                         logMessage += ` +${reward.value} Gold`
                     } else if (reward.type === 'resource' && reward.resourceId) {
                         resourcesGained[reward.resourceId] += reward.value
+                        get().updateQuestProgress('resource', reward.resourceId, reward.value)
                         logMessage += ` +${reward.value} ${reward.resourceId}`
                     } else if (reward.type === 'item') {
                         const item: Item = {
@@ -553,6 +575,14 @@ export const useGameStore = create<GameState>()(
                 })
 
                 get().addLog(logMessage, 'success')
+                
+                // Track daily quest progress for actions
+                import('./dailyQuestStore').then(({ useDailyQuestStore }) => {
+                    useDailyQuestStore.getState().updateDailyQuestProgress('resource', 'actions_completed', 1)
+                }).catch(() => {
+                    // Daily quest store not available
+                })
+                
                 get().saveToCloud()
             },
 
@@ -745,6 +775,15 @@ export const useGameStore = create<GameState>()(
                 get().addItem(recipe.result)
                 get().addXp(recipe.xpReward)
                 get().addLog(`Crafted ${recipe.result.name}`, 'success')
+                get().updateQuestProgress('item', recipe.result.id, 1)
+                
+                // Track daily quest progress for crafting
+                import('./dailyQuestStore').then(({ useDailyQuestStore }) => {
+                    useDailyQuestStore.getState().updateDailyQuestProgress('resource', 'items_crafted', 1)
+                }).catch(() => {
+                    // Daily quest store not available
+                })
+                
                 get().saveToCloud()
             },
 
@@ -762,9 +801,24 @@ export const useGameStore = create<GameState>()(
                         newLevel++
                         newMaxXp = Math.floor(newMaxXp * 1.5)
                         newSkillPoints++
-                        get().addLog(`Level Up! You are now level ${newLevel}.`, 'success')
+                        
+                        // Increase queue slots every 5 levels (3 base + 1 every 5 levels)
+                        const newMaxQueueSlots = 3 + Math.floor(newLevel / 5)
+                        
+                        get().addLog(`Level Up! You are now level ${newLevel}. Queue slots increased to ${newMaxQueueSlots}!`, 'success')
                         // Update quest progress for level type quests
                         get().updateQuestProgress('level', newLevel.toString(), 1)
+                        
+                        return {
+                            character: {
+                                ...state.character,
+                                xp: newXp,
+                                level: newLevel,
+                                max_xp: newMaxXp,
+                                skillPoints: newSkillPoints,
+                                maxQueueSlots: newMaxQueueSlots
+                            }
+                        }
                     }
 
                     return {
@@ -824,6 +878,7 @@ export const useGameStore = create<GameState>()(
                     return
                 }
 
+                const newLevel = character.buildings[type] + 1
                 set((state) => ({
                     character: state.character ? {
                         ...state.character,
@@ -835,11 +890,19 @@ export const useGameStore = create<GameState>()(
                         },
                         buildings: {
                             ...state.character.buildings,
-                            [type]: state.character.buildings[type] + 1
-                        }
+                            [type]: newLevel
+                        },
+                        // Update max population when Town Hall is upgraded
+                        maxPopulation: type === 'townHall' 
+                            ? 5 + (newLevel - 1) * 3  // 5 base + 3 per level
+                            : state.character.maxPopulation
                     } : null
                 }))
-                get().addLog(`Upgraded ${type} to level ${character.buildings[type] + 1}`, 'success')
+                if (type === 'townHall') {
+                    get().addLog(`Upgraded ${type} to level ${newLevel}. Max population increased to ${5 + (newLevel - 1) * 3}!`, 'success')
+                } else {
+                    get().addLog(`Upgraded ${type} to level ${newLevel}`, 'success')
+                }
                 get().saveToCloud()
             },
 
@@ -946,6 +1009,13 @@ export const useGameStore = create<GameState>()(
                     })
                     return { quests: newQuests }
                 })
+
+                // Also update daily quests
+                import('./dailyQuestStore').then(({ useDailyQuestStore }) => {
+                    useDailyQuestStore.getState().updateDailyQuestProgress(type, target, amount)
+                }).catch(() => {
+                    // Daily quest store not available, ignore
+                })
             },
 
             completeQuest: (questId) => {
@@ -1001,6 +1071,117 @@ export const useGameStore = create<GameState>()(
                 if (data && data.game_state) {
                     set({ character: data.game_state as Character })
                     get().addLog('Game loaded from cloud.', 'success')
+                }
+            },
+
+            hireWorker: (workerType) => {
+                const { character } = get()
+                if (!character) return
+
+                const workerNames = {
+                    woodsman: 'Woodsman',
+                    miner: 'Miner',
+                    researcher: 'Researcher'
+                }
+
+                const totalWorkers = character.workers.woodsman + character.workers.miner + character.workers.researcher
+                if (totalWorkers >= character.maxPopulation) {
+                    get().addLog(`Population limit reached! Upgrade Town Hall to hire more workers.`, 'warning')
+                    return
+                }
+
+                const hireCost = 50 * (character.workers[workerType] + 1) // Increasing cost per worker
+
+                if (character.gold < hireCost) {
+                    get().addLog(`Not enough gold! Need ${hireCost} gold to hire a ${workerNames[workerType]}.`, 'warning')
+                    return
+                }
+
+                set((state) => ({
+                    character: state.character ? {
+                        ...state.character,
+                        gold: state.character.gold - hireCost,
+                        workers: {
+                            ...state.character.workers,
+                            [workerType]: state.character.workers[workerType] + 1
+                        }
+                    } : null
+                }))
+
+                get().addLog(`Hired a ${workerNames[workerType]}! Total: ${character.workers[workerType] + 1}`, 'success')
+                get().saveToCloud()
+            },
+
+            fireWorker: (workerType) => {
+                const { character } = get()
+                if (!character || character.workers[workerType] <= 0) return
+
+                const workerNames = {
+                    woodsman: 'Woodsman',
+                    miner: 'Miner',
+                    researcher: 'Researcher'
+                }
+
+                set((state) => ({
+                    character: state.character ? {
+                        ...state.character,
+                        workers: {
+                            ...state.character.workers,
+                            [workerType]: Math.max(0, state.character.workers[workerType] - 1)
+                        }
+                    } : null
+                }))
+
+                get().addLog(`Fired a ${workerNames[workerType]}.`, 'info')
+                get().saveToCloud()
+            },
+
+            processAutoResources: () => {
+                const { character } = get()
+                if (!character) return
+
+                let woodProduced = 0
+                let stoneProduced = 0
+                let techProduced = 0
+
+                // Woodsmen produce wood (1 wood per worker per second)
+                if (character.workers.woodsman > 0) {
+                    woodProduced = character.workers.woodsman
+                    // Lumber Mill bonus: +50% per level
+                    if (character.buildings.lumberMill > 0) {
+                        woodProduced = Math.floor(woodProduced * (1 + character.buildings.lumberMill * 0.5))
+                    }
+                }
+
+                // Miners produce stone (1 stone per worker per second)
+                if (character.workers.miner > 0) {
+                    stoneProduced = character.workers.miner
+                    // Mine bonus: +50% per level
+                    if (character.buildings.mine > 0) {
+                        stoneProduced = Math.floor(stoneProduced * (1 + character.buildings.mine * 0.5))
+                    }
+                }
+
+                // Researchers produce tech (0.5 tech per worker per second)
+                if (character.workers.researcher > 0) {
+                    techProduced = Math.floor(character.workers.researcher * 0.5)
+                    // Library bonus: +25% per level
+                    if (character.buildings.library > 0) {
+                        techProduced = Math.floor(techProduced * (1 + character.buildings.library * 0.25))
+                    }
+                }
+
+                if (woodProduced > 0 || stoneProduced > 0 || techProduced > 0) {
+                    set((state) => ({
+                        character: state.character ? {
+                            ...state.character,
+                            resources: {
+                                wood: state.character.resources.wood + woodProduced,
+                                stone: state.character.resources.stone + stoneProduced,
+                                tech: state.character.resources.tech + techProduced
+                            }
+                        } : null
+                    }))
                 }
             },
 

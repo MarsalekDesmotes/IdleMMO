@@ -18,7 +18,7 @@ export function NPCView() {
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                     <MessageSquare className="h-5 w-5" />
-                    Characters in {character.currentZone.replace('_', ' ')}
+                    World - {character.currentZone.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                 </h3>
                 {zoneNPCs.map(npc => (
                     <Card key={npc.id}>
@@ -39,8 +39,8 @@ export function NPCView() {
 
                                 if (!questDef) return null
 
-                                const isCompleted = activeQuest?.status === 'completed'
-                                const isAccepted = !!activeQuest
+                                const isCompleted = activeQuest?.isCompleted === true || activeQuest?.status === 'completed'
+                                const isAccepted = !!activeQuest && activeQuest.status !== 'completed'
 
                                 return (
                                     <div key={npcQuest.id} className="w-full rounded-md border p-2 bg-muted/50">
@@ -52,16 +52,29 @@ export function NPCView() {
                                         </div>
                                         <p className="text-xs text-muted-foreground mb-2">{questDef.description}</p>
 
+                                        {isAccepted && !isCompleted && activeQuest && (
+                                            <div className="mb-2 space-y-1">
+                                                {activeQuest.requirements.map((req, idx) => (
+                                                    <div key={idx} className="text-xs flex justify-between items-center">
+                                                        <span className="text-muted-foreground">{req.type === 'resource' ? req.target : req.type === 'kill' ? `Kill ${req.target}` : req.type === 'level' ? `Level ${req.target}` : req.target}</span>
+                                                        <span className={req.current >= req.amount ? "text-green-500 font-medium" : ""}>
+                                                            {req.current} / {req.amount}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
                                         <div className="flex justify-between items-center">
                                             <div className="text-xs">
                                                 Rewards: <span className="text-yellow-500">{questDef.rewards.gold}g</span>, <span className="text-blue-400">{questDef.rewards.xp} XP</span>
                                             </div>
-                                            {!isAccepted && (
+                                            {!isAccepted && !isCompleted && (
                                                 <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => acceptQuest({ id: npcQuest.id })}>
                                                     Accept
                                                 </Button>
                                             )}
-                                            {isAccepted && !isCompleted && (
+                                            {isAccepted && !isCompleted && activeQuest && activeQuest.requirements.every(r => r.current >= r.amount) && (
                                                 <Button size="sm" className="h-6 text-xs" onClick={() => completeQuest(npcQuest.id)}>
                                                     Complete
                                                 </Button>

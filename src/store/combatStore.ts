@@ -80,10 +80,19 @@ export const useCombatStore = create<CombatState>((set, get) => ({
 
         // Handle Basic Attack
         if (skillId === 'basic_attack') {
-            const dmg = Math.floor(character.level + (character.stats?.strength || 0) / 2 + 2)
+            const baseDmg = Math.floor(character.level + (character.stats?.strength || 0) / 2 + 2)
+            
+            // Critical hit chance (5% base + agility bonus)
+            const critChance = 0.05 + ((character.stats?.agility || 0) * 0.001)
+            const isCrit = Math.random() < critChance
+            const dmg = isCrit ? Math.floor(baseDmg * 2) : baseDmg
+            
             let logMsg = `You attacked.`
-            let newEnemyHp = state.enemy!.hp - dmg
+            if (isCrit) {
+                logMsg += ` Critical Hit!`
+            }
             logMsg += ` Dealt ${dmg} damage.`
+            let newEnemyHp = state.enemy!.hp - dmg
 
             // Check Victory (Duplicate logic, should refactor but inline for now)
             if (newEnemyHp <= 0) {
@@ -95,7 +104,16 @@ export const useCombatStore = create<CombatState>((set, get) => ({
                 const { activeEvent } = useEventStore.getState()
                 const xpMult = activeEvent ? activeEvent.xpMultiplier : 1.0
                 useGameStore.getState().addXp(Math.floor(state.enemy!.level * 20 * xpMult))
-                useGameStore.getState().debugAddGold(state.enemy!.level * 10)
+                const goldEarned = state.enemy!.level * 10
+                useGameStore.getState().debugAddGold(goldEarned)
+                
+                // Track daily quest progress for kills
+                import('./dailyQuestStore').then(({ useDailyQuestStore }) => {
+                    useDailyQuestStore.getState().updateDailyQuestProgress('kill', 'any', 1)
+                }).catch(() => {
+                    // Daily quest store not available
+                })
+                
                 return
             }
 
@@ -175,7 +193,34 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         const state = get()
         if (state.phase !== 'active') return
 
-        const dmg = state.enemy!.damage
+        const { character } = useGameStore.getState()
+        if (!character) return
+
+        const baseDmg = state.enemy!.damage
+        
+        // Dodge chance (agility based)
+        const dodgeChance = 0.03 + ((character.stats?.agility || 0) * 0.002)
+        const isDodged = Math.random() < dodgeChance
+        
+        if (isDodged) {
+            set({
+                combatLog: [...state.combatLog, `${state.enemy!.name} attacks, but you dodged!`],
+                turn: 'player'
+            })
+            return
+        }
+
+        // Block chance (defense based)
+        const blockChance = 0.02 + ((character.stats?.defense || 0) * 0.001)
+        const isBlocked = Math.random() < blockChance
+        const dmg = isBlocked ? Math.floor(baseDmg * 0.5) : baseDmg
+        
+        let logMsg = `${state.enemy!.name} attacks`
+        if (isBlocked) {
+            logMsg += `, but you blocked!`
+        }
+        logMsg += ` for ${dmg} damage.`
+        
         const newPlayerHp = state.playerHp - dmg
 
         if (newPlayerHp <= 0) {
@@ -193,7 +238,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
 
         set({
             playerHp: newPlayerHp,
-            combatLog: [...state.combatLog, `${state.enemy!.name} attacks for ${dmg} damage.`],
+            combatLog: [...state.combatLog, logMsg],
             turn: 'player'
         })
 

@@ -25,16 +25,19 @@ export function ActiveAction() {
             const elapsed = (now - activeItem.startTime!) / 1000
             const duration = activeItem.action.duration
 
+            if (elapsed >= duration) {
+                setProgress(100)
+                setTimeLeft(0)
+                clearInterval(interval)
+                completeAction(activeItem.id)
+                return
+            }
+
             const newProgress = Math.min((elapsed / duration) * 100, 100)
             const newTimeLeft = Math.max(duration - elapsed, 0)
 
             setProgress(newProgress)
             setTimeLeft(newTimeLeft)
-
-            if (elapsed >= duration) {
-                completeAction(activeItem.id)
-                // Interval cleared by cleanup or next render
-            }
         }, 100)
 
         return () => clearInterval(interval)

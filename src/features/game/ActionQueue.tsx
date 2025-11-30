@@ -45,19 +45,6 @@ const JOB_ACTIONS: Action[] = [
         ]
     },
     {
-        id: 'forage_herbs',
-        name: 'Forage Herbs',
-        description: 'Gather medicinal herbs from the forest.',
-        duration: 7,
-        staminaCost: 12,
-        requiredZone: 'outskirts',
-        rewards: [
-            { type: 'xp', value: 6 },
-            { type: 'gold', value: 5 },
-            { type: 'resource', resourceId: 'wood', value: 3 }
-        ]
-    },
-    {
         id: 'help_villagers',
         name: 'Help Villagers',
         description: 'Assist the local villagers with daily tasks.',
@@ -67,19 +54,6 @@ const JOB_ACTIONS: Action[] = [
         rewards: [
             { type: 'xp', value: 20 },
             { type: 'gold', value: 15 }
-        ]
-    },
-    {
-        id: 'gather_stones',
-        name: 'Gather Stones',
-        description: 'Collect stones from the riverbed.',
-        duration: 6,
-        staminaCost: 10,
-        requiredZone: 'outskirts',
-        rewards: [
-            { type: 'xp', value: 5 },
-            { type: 'gold', value: 3 },
-            { type: 'resource', resourceId: 'stone', value: 5 }
         ]
     },
 
