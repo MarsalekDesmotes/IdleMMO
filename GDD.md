@@ -850,3 +850,4 @@ IdleAgeMMO, sağlam bir temel üzerine kurulu bir idle/incremental MMO oyunudur.
 **Last Updated:** Kasım 2025  
 **Maintained By:** Development Team
 
+
