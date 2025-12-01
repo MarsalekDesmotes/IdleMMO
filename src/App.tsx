@@ -17,10 +17,12 @@ import { KingdomView } from "@/features/kingdom/KingdomView"
 import { ChatView } from "@/features/chat/ChatView"
 import { DailyQuests } from "@/features/quests/DailyQuests"
 import { HourlyReward } from "@/features/rewards/HourlyReward"
+import { PeriodicRewards } from "@/features/rewards/PeriodicRewards"
 import { DebugPanel } from "@/components/debug/DebugPanel"
 import { ResourceHeader } from "@/components/layout/ResourceHeader"
 import { AppShell } from "@/components/layout/AppShell"
 import { EventBanner } from "@/components/game/EventBanner"
+import { GuestAccountLink } from "@/components/game/GuestAccountLink"
 import { AvatarSelection } from "@/features/character/AvatarSelection"
 import { AuthPage } from "@/features/auth/AuthPage"
 
@@ -55,6 +57,8 @@ function App() {
       <div className="space-y-6">
         <ResourceHeader />
 
+        <GuestAccountLink />
+
         <EventBanner />
 
         {currentView === 'dashboard' && (
@@ -67,8 +71,13 @@ function App() {
               <HourlyReward />
               <DailyQuests />
               <GameLog />
+              <ChatView />
             </div>
           </div>
+        )}
+
+        {currentView === 'rewards' && (
+          <PeriodicRewards />
         )}
 
         {currentView === 'inventory' && (
@@ -102,9 +111,6 @@ function App() {
           <KingdomView />
         )}
 
-        {currentView === 'chat' && (
-          <ChatView />
-        )}
       </div>
 
       <DebugPanel />

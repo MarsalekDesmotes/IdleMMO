@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react"
 
 export function AuthPage() {
     const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
     const [loading, setLoading] = useState(false)
     const { signIn } = useAuthStore()
 
@@ -15,7 +16,7 @@ export function AuthPage() {
         e.preventDefault()
         setLoading(true)
         try {
-            await signIn(email)
+            await signIn(email, password)
             // For password login, it might return error or success.
             // If success, auth state changes and App redirects.
         } catch (error) {
@@ -39,9 +40,21 @@ export function AuthPage() {
                                 <Label htmlFor="email">Email</Label>
                                 <Input
                                     id="email"
+                                    type="email"
                                     placeholder="hero@idleagemmo.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="flex flex-col space-y-1.5">
+                                <Label htmlFor="password">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="Enter your password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     required
                                 />
                             </div>
@@ -51,19 +64,6 @@ export function AuthPage() {
                             Enter World
                         </Button>
                     </form>
-                    <div className="relative my-4">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">
-                                Or continue with
-                            </span>
-                        </div>
-                    </div>
-                    <Button variant="outline" className="w-full" onClick={() => useAuthStore.getState().loginAsGuest()}>
-                        Play as Guest
-                    </Button>
                     <div className="relative my-4">
                         <div className="absolute inset-0 flex items-center">
                             <span className="w-full border-t" />

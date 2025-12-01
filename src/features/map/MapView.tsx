@@ -3,28 +3,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button"
 import { MapPin, Mountain, Tent, RefreshCw, Trees } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { LucideIcon } from "lucide-react"
 
-export function MapView() {
-    const { character, travelToZone, resetClass } = useGameStore()
+interface ZoneCardProps {
+    id: ZoneId
+    name: string
+    levelRange: string
+    description: string
+    icon: LucideIcon
+    character: ReturnType<typeof useGameStore>['character']
+    travelToZone: ReturnType<typeof useGameStore>['travelToZone']
+}
 
+const ZoneCard = ({ id, name, levelRange, description, icon: Icon, character, travelToZone }: ZoneCardProps) => {
     if (!character) return null
 
-    const ZoneCard = ({
-        id,
-        name,
-        levelRange,
-        description,
-        icon: Icon
-    }: {
-        id: ZoneId,
-        name: string,
-        levelRange: string,
-        description: string,
-        icon: any
-    }) => {
-        const isCurrent = character.currentZone === id
-        const [minLevel] = levelRange.split('-').map(Number)
-        const isLocked = character.level < minLevel
+    const isCurrent = character.currentZone === id
+    const [minLevel] = levelRange.split('-').map(Number)
+    const isLocked = character.level < minLevel
 
         return (
             <Card className={cn("relative overflow-hidden transition-all hover:border-primary", isCurrent && "border-primary bg-primary/5")}>
@@ -54,8 +50,13 @@ export function MapView() {
                     </Button>
                 </CardFooter>
             </Card>
-        )
-    }
+    )
+}
+
+export function MapView() {
+    const { character, travelToZone, resetClass } = useGameStore()
+
+    if (!character) return null
 
     return (
         <div className="space-y-6">
@@ -66,6 +67,8 @@ export function MapView() {
                     levelRange="1-20"
                     description="Safe lands surrounding the stronghold. Good for gathering basic resources."
                     icon={Tent}
+                    character={character}
+                    travelToZone={travelToZone}
                 />
                 <ZoneCard
                     id="iron_hills"
@@ -73,6 +76,8 @@ export function MapView() {
                     levelRange="20-40"
                     description="Rugged terrain rich in minerals. Home to the Temple of Rebirth."
                     icon={Mountain}
+                    character={character}
+                    travelToZone={travelToZone}
                 />
                 <ZoneCard
                     id="dark_forest"
@@ -80,6 +85,8 @@ export function MapView() {
                     levelRange="40-60"
                     description="A mysterious forest shrouded in ancient magic. Dangerous but rewarding for the brave."
                     icon={Trees}
+                    character={character}
+                    travelToZone={travelToZone}
                 />
             </div>
 

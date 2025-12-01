@@ -1,22 +1,27 @@
-import { LayoutDashboard, Map, Castle, Hammer, Backpack, Sword, Globe, Zap } from "lucide-react"
+import { LayoutDashboard, Map, Castle, Hammer, Backpack, Sword, Globe, Zap, Gift, Moon } from "lucide-react"
 import { useUIStore } from "@/store/uiStore"
 import { useGameStore } from "@/store/gameStore"
 import { cn } from "@/lib/utils"
 import { UserProfile } from "@/features/character/UserProfile"
+import { useAvailableRewards, useAvailableSkills, useHasActiveJobs } from "@/hooks/useNotifications"
 
 export function Sidebar() {
     const { currentView, setView } = useUIStore()
-    const { character } = useGameStore()
+    const { character, actionQueue } = useGameStore()
+    const hasActiveJobs = actionQueue.length > 0
+    const hasAvailableRewards = useAvailableRewards()
+    const hasAvailableSkills = useAvailableSkills()
 
     const navItems = [
-        { id: 'dashboard', label: 'Stronghold', icon: LayoutDashboard, minLevel: 1 },
+        { id: 'dashboard', label: 'Stronghold', icon: LayoutDashboard, minLevel: 1, showIdle: true },
         { id: 'combat', label: 'Combat', icon: Sword, minLevel: 1 },
-        { id: 'skills', label: 'Skills', icon: Zap, minLevel: 2 },
+        { id: 'skills', label: 'Skills', icon: Zap, minLevel: 2, showNotification: hasAvailableSkills },
         { id: 'inventory', label: 'Inventory', icon: Backpack, minLevel: 1 },
         { id: 'crafting', label: 'Crafting', icon: Hammer, minLevel: 1 },
         { id: 'map', label: 'Map', icon: Map, minLevel: 1 },
         { id: 'world', label: 'World', icon: Globe, minLevel: 1 },
         { id: 'kingdom', label: 'Kingdom', icon: Castle, minLevel: 3 },
+        { id: 'rewards', label: 'Rewards', icon: Gift, minLevel: 1, showNotification: hasAvailableRewards },
     ]
 
     return (
@@ -28,16 +33,18 @@ export function Sidebar() {
 
             <UserProfile />
 
-            <nav className="flex-1 p-4 space-y-2">
+            <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                 {navItems.map((item) => {
                     const isLocked = (character?.level || 1) < item.minLevel
+                    const showIdle = item.showIdle && !hasActiveJobs && !isLocked
+                    const showNotification = item.showNotification && !isLocked
                     return (
                         <button
                             key={item.id}
                             onClick={() => !isLocked && setView(item.id as any)}
                             disabled={isLocked}
                             className={cn(
-                                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors relative",
                                 currentView === item.id
                                     ? "bg-primary/10 text-primary"
                                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
@@ -46,6 +53,12 @@ export function Sidebar() {
                         >
                             <item.icon className="h-4 w-4" />
                             {item.label}
+                            {showIdle && (
+                                <span className="ml-auto text-xs text-muted-foreground/70 animate-pulse">z z z</span>
+                            )}
+                            {showNotification && (
+                                <span className="ml-auto h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+                            )}
                             {isLocked && <span className="ml-auto text-[10px] text-muted-foreground">Lvl {item.minLevel}</span>}
                         </button>
                     )

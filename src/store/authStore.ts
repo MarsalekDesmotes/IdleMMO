@@ -10,7 +10,8 @@ interface AuthState {
     loading: boolean
     isGuest: boolean
     initialize: () => Promise<void>
-    signIn: (email: string) => Promise<{ error: any }>
+    signIn: (email: string, password: string) => Promise<{ error: any }>
+    linkGuestAccount: (email: string, password: string) => Promise<{ error: any }>
     loginAsGuest: () => void
     signOut: () => Promise<void>
 }
@@ -48,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
                     set({ loading: false })
                 }
             },
-            signIn: async (email: string) => {
+            signIn: async (email: string, password: string) => {
                 if (!isSupabaseAvailable()) {
                     return { error: { message: 'Supabase not configured. Please use Guest mode.' } }
                 }
@@ -56,14 +57,14 @@ export const useAuthStore = create<AuthState>()(
                 try {
                     const { error } = await supabase!.auth.signInWithPassword({
                         email,
-                        password: 'IdleAgeMMO' // Hardcoded for this specific user request/demo
+                        password
                     })
 
                     if (error) {
                         // If login fails, try sign up (auto-register)
                         const { error: signUpError } = await supabase!.auth.signUp({
                             email,
-                            password: 'IdleAgeMMO'
+                            password
                         })
                         return { error: signUpError }
                     }
@@ -72,6 +73,46 @@ export const useAuthStore = create<AuthState>()(
                 } catch (error) {
                     console.error('Sign in failed:', error)
                     return { error: { message: 'Authentication failed. Please try Guest mode.' } }
+                }
+            },
+            linkGuestAccount: async (email: string, password: string) => {
+                if (!isSupabaseAvailable()) {
+                    return { error: { message: 'Supabase not configured. Cannot link account.' } }
+                }
+
+                const { character } = useGameStore.getState()
+                if (!character) {
+                    return { error: { message: 'No character data to save.' } }
+                }
+
+                try {
+                    // Sign up or sign in
+                    const { error: signUpError } = await supabase!.auth.signUp({
+                        email,
+                        password
+                    })
+
+                    if (signUpError) {
+                        // Try to sign in if account exists
+                        const { error: signInError } = await supabase!.auth.signInWithPassword({
+                            email,
+                            password
+                        })
+                        if (signInError) {
+                            return { error: signInError }
+                        }
+                    }
+
+                    // Save character to cloud
+                    await useGameStore.getState().saveToCloud()
+
+                    // Clear guest mode
+                    set({ isGuest: false })
+
+                    return { error: null }
+                } catch (error) {
+                    console.error('Link account failed:', error)
+                    return { error: { message: 'Failed to link account.' } }
                 }
             },
             loginAsGuest: () => {

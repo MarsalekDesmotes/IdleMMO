@@ -2,37 +2,31 @@ import { useGameStore, type Buildings } from "@/store/gameStore"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Castle, Hammer, Book, Trees, Pickaxe, Cpu, Users, UserPlus, UserMinus } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
-export function KingdomView() {
-    const { character, constructBuilding, hireWorker, fireWorker } = useGameStore()
+interface BuildingCardProps {
+    type: keyof Buildings
+    name: string
+    icon: LucideIcon
+    description: string
+    baseCost: { credits: number, wood: number, stone: number }
+    character: ReturnType<typeof useGameStore>['character']
+    constructBuilding: ReturnType<typeof useGameStore>['constructBuilding']
+}
 
+const BuildingCard = ({ type, name, icon: Icon, description, baseCost, character, constructBuilding }: BuildingCardProps) => {
     if (!character) return null
 
-    const totalWorkers = character.workers.woodsman + character.workers.miner + character.workers.researcher
+    const level = character.buildings[type]
+    const cost = {
+        credits: Math.floor(baseCost.credits * Math.pow(1.5, level)),
+        wood: Math.floor(baseCost.wood * Math.pow(1.5, level)),
+        stone: Math.floor(baseCost.stone * Math.pow(1.5, level))
+    }
 
-    const BuildingCard = ({
-        type,
-        name,
-        icon: Icon,
-        description,
-        baseCost
-    }: {
-        type: keyof Buildings,
-        name: string,
-        icon: any,
-        description: string,
-        baseCost: { credits: number, wood: number, stone: number }
-    }) => {
-        const level = character.buildings[type]
-        const cost = {
-            credits: Math.floor(baseCost.credits * Math.pow(1.5, level)),
-            wood: Math.floor(baseCost.wood * Math.pow(1.5, level)),
-            stone: Math.floor(baseCost.stone * Math.pow(1.5, level))
-        }
-
-        const canAfford = character.gold >= cost.credits &&
-            character.resources.wood >= cost.wood &&
-            character.resources.stone >= cost.stone
+    const canAfford = character.gold >= cost.credits &&
+        character.resources.wood >= cost.wood &&
+        character.resources.stone >= cost.stone
 
         return (
             <Card>
@@ -70,8 +64,15 @@ export function KingdomView() {
                     </Button>
                 </CardFooter>
             </Card>
-        )
-    }
+    )
+}
+
+export function KingdomView() {
+    const { character, constructBuilding, hireWorker, fireWorker } = useGameStore()
+
+    if (!character) return null
+
+    const totalWorkers = character.workers.woodsman + character.workers.miner + character.workers.researcher
 
     return (
         <div className="space-y-6">
@@ -268,6 +269,8 @@ export function KingdomView() {
                         icon={Castle}
                         description="The heart of your kingdom. Increases population limit."
                         baseCost={{ credits: 100, wood: 50, stone: 20 }}
+                        character={character}
+                        constructBuilding={constructBuilding}
                     />
                 </div>
             </div>
@@ -286,6 +289,8 @@ export function KingdomView() {
                         icon={Trees}
                         description="Increases wood production by 50% per level."
                         baseCost={{ credits: 80, wood: 40, stone: 20 }}
+                        character={character}
+                        constructBuilding={constructBuilding}
                     />
                     <BuildingCard
                         type="mine"
@@ -293,6 +298,8 @@ export function KingdomView() {
                         icon={Pickaxe}
                         description="Increases stone production by 50% per level."
                         baseCost={{ credits: 100, wood: 30, stone: 40 }}
+                        character={character}
+                        constructBuilding={constructBuilding}
                     />
                 </div>
             </div>
@@ -311,6 +318,8 @@ export function KingdomView() {
                         icon={Hammer}
                         description="Forge better weapons and tools."
                         baseCost={{ credits: 150, wood: 100, stone: 50 }}
+                        character={character}
+                        constructBuilding={constructBuilding}
                     />
                     <BuildingCard
                         type="library"
@@ -318,6 +327,8 @@ export function KingdomView() {
                         icon={Book}
                         description="Increases tech production by 25% per level. Research technologies."
                         baseCost={{ credits: 200, wood: 150, stone: 100 }}
+                        character={character}
+                        constructBuilding={constructBuilding}
                     />
                 </div>
             </div>

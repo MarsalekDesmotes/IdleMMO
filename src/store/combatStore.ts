@@ -52,7 +52,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         if (!character) return
 
         const { activeEvent } = useEventStore.getState()
-        let finalEnemy = { ...enemy }
+        const finalEnemy = { ...enemy }
 
         if (activeEvent && activeEvent.enemyModifier) {
             finalEnemy.name = `${activeEvent.enemyModifier.namePrefix} ${finalEnemy.name}`
@@ -92,7 +92,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
                 logMsg += ` Critical Hit!`
             }
             logMsg += ` Dealt ${dmg} damage.`
-            let newEnemyHp = state.enemy!.hp - dmg
+            const newEnemyHp = state.enemy!.hp - dmg
 
             // Check Victory (Duplicate logic, should refactor but inline for now)
             if (newEnemyHp <= 0) {

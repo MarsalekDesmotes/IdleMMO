@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useGameStore } from "@/store/gameStore"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Gift, X } from "lucide-react"

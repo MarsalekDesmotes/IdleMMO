@@ -18,7 +18,7 @@ export function UserProfile() {
 
     if (!character) return null
 
-    const avatarSrc = AVATARS[character.class][character.gender]
+    const avatarSrc = AVATARS[character.class]?.[character.gender] || AVATARS.Paladin.male
 
     return (
         <div className="flex flex-col items-center p-4 border-b bg-card/20">

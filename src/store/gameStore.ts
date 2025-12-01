@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { supabase, isSupabaseAvailable, safeSupabaseCall } from '@/lib/supabase'
+import { isSupabaseAvailable, safeSupabaseCall } from '@/lib/supabase'
 import { SKILLS } from '@/data/skills'
 
 export type CharacterClass = 'Paladin' | 'Archmage' | 'Ranger'
@@ -512,7 +512,7 @@ export const useGameStore = create<GameState>()(
                 let logMessage = `Completed ${action.name}.`
                 let xpGained = 0
                 let goldGained = 0
-                let resourcesGained = { wood: 0, stone: 0, tech: 0 }
+                const resourcesGained = { wood: 0, stone: 0, tech: 0 }
 
                 if (action.resourceReward) {
                     resourcesGained[action.resourceReward.resource] += action.resourceReward.amount
@@ -590,7 +590,7 @@ export const useGameStore = create<GameState>()(
                 set((state) => {
                     if (!state.character) return state
                     const existingItemIndex = state.character.inventory.findIndex(i => i.item.id === item.id)
-                    let newInventory = [...state.character.inventory]
+                    const newInventory = [...state.character.inventory]
 
                     if (existingItemIndex >= 0) {
                         newInventory[existingItemIndex].count += count
@@ -610,7 +610,7 @@ export const useGameStore = create<GameState>()(
                     const existingItemIndex = state.character.inventory.findIndex(i => i.item.id === itemId)
                     if (existingItemIndex === -1) return state
 
-                    let newInventory = [...state.character.inventory]
+                    const newInventory = [...state.character.inventory]
                     if (newInventory[existingItemIndex].count > count) {
                         newInventory[existingItemIndex].count -= count
                     } else {
@@ -797,7 +797,6 @@ export const useGameStore = create<GameState>()(
 
                     if (newXp >= newMaxXp) {
                         newXp -= newMaxXp
-                        const oldLevel = newLevel
                         newLevel++
                         newMaxXp = Math.floor(newMaxXp * 1.5)
                         newSkillPoints++
@@ -960,13 +959,15 @@ export const useGameStore = create<GameState>()(
 
                 let stats = { strength: 0, intelligence: 0, agility: 0, defense: 0, attack: 0, hpRegen: 0, critChance: 0 }
 
-                Object.values(character.equipment).forEach(item => {
-                    if (item && item.stats) {
-                        if (item.stats.attack) stats.attack += item.stats.attack
-                        if (item.stats.defense) stats.defense += item.stats.defense
-                        if (item.stats.speed) stats.agility += item.stats.speed
-                    }
-                })
+                if (character.equipment && typeof character.equipment === 'object') {
+                    Object.values(character.equipment).forEach(item => {
+                        if (item && item.stats) {
+                            if (item.stats.attack) stats.attack += item.stats.attack
+                            if (item.stats.defense) stats.defense += item.stats.defense
+                            if (item.stats.speed) stats.agility += item.stats.speed
+                        }
+                    })
+                }
 
                 const classSkills = SKILLS[character.class]
                 character.unlockedSkills.forEach(skillId => {
@@ -1069,7 +1070,20 @@ export const useGameStore = create<GameState>()(
                 )
 
                 if (data && data.game_state) {
-                    set({ character: data.game_state as Character })
+                    const loadedCharacter = data.game_state as Character
+                    // Ensure equipment is initialized
+                    if (!loadedCharacter.equipment) {
+                        loadedCharacter.equipment = { head: null, body: null, hands: null, weapon: null }
+                    }
+                    // Ensure workers are initialized
+                    if (!loadedCharacter.workers) {
+                        loadedCharacter.workers = { woodsman: 0, miner: 0, researcher: 0 }
+                    }
+                    // Ensure maxPopulation is initialized
+                    if (!loadedCharacter.maxPopulation) {
+                        loadedCharacter.maxPopulation = 5
+                    }
+                    set({ character: loadedCharacter })
                     get().addLog('Game loaded from cloud.', 'success')
                 }
             },
@@ -1252,6 +1266,33 @@ export const useGameStore = create<GameState>()(
                 character: state.character,
                 quests: state.quests
             }),
+            onRehydrateStorage: () => (state) => {
+                if (state?.character) {
+                    // Ensure equipment is initialized
+                    if (!state.character.equipment || typeof state.character.equipment !== 'object') {
+                        state.character.equipment = { head: null, body: null, hands: null, weapon: null }
+                    }
+                    // Ensure workers are initialized
+                    if (!state.character.workers || typeof state.character.workers !== 'object') {
+                        state.character.workers = { woodsman: 0, miner: 0, researcher: 0 }
+                    }
+                    // Ensure maxPopulation is initialized
+                    if (typeof state.character.maxPopulation !== 'number') {
+                        state.character.maxPopulation = 5
+                    }
+                    // Ensure maxQueueSlots is initialized
+                    if (typeof state.character.maxQueueSlots !== 'number') {
+                        state.character.maxQueueSlots = 3
+                    }
+                    // Ensure mana is initialized
+                    if (typeof state.character.mana !== 'number') {
+                        state.character.mana = state.character.max_mana || 50
+                    }
+                    if (typeof state.character.max_mana !== 'number') {
+                        state.character.max_mana = 50
+                    }
+                }
+            }
         }
     )
 )

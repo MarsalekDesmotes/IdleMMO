@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseAvailable } from '@/lib/supabase'
 import { useAuthStore } from './authStore'
+import { useGameStore } from './gameStore'
 
 export interface ChatMessage {
     id: string
@@ -31,12 +32,14 @@ export const useChatStore = create<ChatState>((set) => ({
         set({ isLoading: true })
 
         // Fetch initial messages
-        supabase!
-            .from('chat_messages')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(50)
-            .then(({ data, error }) => {
+        void (async () => {
+            try {
+                const { data, error } = await supabase!
+                    .from('chat_messages')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(50)
+                
                 if (error) {
                     console.error('Failed to load chat messages:', error)
                     set({ isLoading: false })
@@ -45,11 +48,11 @@ export const useChatStore = create<ChatState>((set) => ({
                 if (data) {
                     set({ messages: data.reverse() as ChatMessage[], isLoading: false })
                 }
-            })
-            .catch((error) => {
+            } catch (error: unknown) {
                 console.error('Chat subscription error:', error)
                 set({ isLoading: false })
-            })
+            }
+        })()
 
         // Subscribe to new messages
         const channel = supabase!
@@ -85,22 +88,23 @@ export const useChatStore = create<ChatState>((set) => ({
             return
         }
 
-        const { user } = useAuthStore.getState()
-        if (!user) {
+        const { user, isGuest } = useAuthStore.getState()
+        const { character } = useGameStore.getState()
+
+        if (!user && !isGuest) {
             console.warn('Cannot send message - user not authenticated')
             return
         }
 
-        // Get username from game store or auth metadata
-        // For now, let's assume we can get it from the user metadata or just use "Player"
-        // Ideally we'd fetch the profile, but let's just use email prefix for now if name missing
-        const username = user.email?.split('@')[0] || 'Unknown'
+        // Get username from character name (guest or authenticated)
+        const username = character?.name || user?.email?.split('@')[0] || 'Unknown'
+        const userId = user?.id || `guest_${Date.now()}`
 
         try {
             const { error } = await supabase!
                 .from('chat_messages')
                 .insert({
-                    user_id: user.id,
+                    user_id: userId,
                     username: username,
                     content
                 })
