@@ -1,0 +1,5 @@
+package io.nexus.protocol;
+
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {}

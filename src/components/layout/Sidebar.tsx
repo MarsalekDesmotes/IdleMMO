@@ -1,9 +1,28 @@
-import { LayoutDashboard, Map, Castle, Hammer, Backpack, Sword, Globe, Zap, Gift, Moon } from "lucide-react"
+import {
+    Sword,
+    Backpack,
+    Hammer,
+    Map as MapIcon,
+    Castle,
+    Swords,
+    Store,
+    Users,
+    ShoppingCart,
+    Flame,
+    LayoutDashboard, // Kept for 'dashboard'
+    Globe,           // Kept for 'world'
+    Zap,             // Kept for 'skills'
+    Gift,            // Kept for 'rewards'
+    PawPrint,        // Kept for 'pets'
+    Skull,           // Added for 'dungeon'
+    Settings,        // Added for 'settings'
+    Scroll           // Added for 'cooking'
+} from "lucide-react"
 import { useUIStore } from "@/store/uiStore"
 import { useGameStore } from "@/store/gameStore"
 import { cn } from "@/lib/utils"
 import { UserProfile } from "@/features/character/UserProfile"
-import { useAvailableRewards, useAvailableSkills, useHasActiveJobs } from "@/hooks/useNotifications"
+import { useAvailableRewards, useAvailableSkills } from "@/hooks/useNotifications"
 
 export function Sidebar() {
     const { currentView, setView } = useUIStore()
@@ -18,10 +37,22 @@ export function Sidebar() {
         { id: 'skills', label: 'Skills', icon: Zap, minLevel: 2, showNotification: hasAvailableSkills },
         { id: 'inventory', label: 'Inventory', icon: Backpack, minLevel: 1 },
         { id: 'crafting', label: 'Crafting', icon: Hammer, minLevel: 1 },
-        { id: 'map', label: 'Map', icon: Map, minLevel: 1 },
+        { id: 'map', label: 'Map', icon: MapIcon, minLevel: 1 }, // Changed to MapIcon
         { id: 'world', label: 'World', icon: Globe, minLevel: 1 },
         { id: 'kingdom', label: 'Kingdom', icon: Castle, minLevel: 3 },
+        { id: 'market', label: 'Market', icon: ShoppingCart, minLevel: 5 }, // Changed to ShoppingCart
+        { id: 'pets', icon: PawPrint, label: 'Pets', minLevel: 5 },
+        { id: 'dungeon', icon: Skull, label: 'Dungeon', minLevel: 10 },
+        { id: 'enhancement', icon: Hammer, label: 'Forge', minLevel: 10 }, // Enhancement Link
+        { id: 'cooking', icon: Scroll, label: 'Cooking', minLevel: 5 }, // Changed to ShoppingCart
+        { id: 'guild', label: 'Guilds', icon: Users, minLevel: 10 },
+        { id: 'arena', label: 'Arena', icon: Swords, minLevel: 10 },
         { id: 'rewards', label: 'Rewards', icon: Gift, minLevel: 1, showNotification: hasAvailableRewards },
+        { id: 'shop', label: 'Shop', icon: Store, minLevel: 1 },
+        { id: 'rebirth', label: 'Rebirth', icon: Flame, minLevel: 20 },
+        { id: 'pets', label: 'Companions', icon: PawPrint, minLevel: 5 },
+        { id: 'cooking', label: 'Cooking', icon: Scroll, minLevel: 5 }, // Added Cooking link
+        { id: 'settings', label: 'Settings', icon: Settings, minLevel: 1 }, // Added Settings link
     ]
 
     return (
@@ -32,6 +63,11 @@ export function Sidebar() {
             </div>
 
             <UserProfile />
+            {character?.isPrime && (
+                <div className="mx-6 mb-2 px-2 py-1 bg-blue-900/30 border border-blue-500/30 rounded text-center text-xs font-bold text-blue-400">
+                    NEXUS PRIME ACTIVE
+                </div>
+            )}
 
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                 {navItems.map((item) => {

@@ -1,7 +1,7 @@
-import { useGameStore, type Buildings } from "@/store/gameStore"
+import { useGameStore, type Buildings, type Character, type GameState } from "@/store/gameStore"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Castle, Hammer, Book, Trees, Pickaxe, Cpu, Users, UserPlus, UserMinus } from "lucide-react"
+import { Castle, Hammer, Book, Trees, Pickaxe, Cpu, Users, UserPlus, UserMinus, ToggleLeft, ToggleRight } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 interface BuildingCardProps {
@@ -10,11 +10,14 @@ interface BuildingCardProps {
     icon: LucideIcon
     description: string
     baseCost: { credits: number, wood: number, stone: number }
-    character: ReturnType<typeof useGameStore>['character']
-    constructBuilding: ReturnType<typeof useGameStore>['constructBuilding']
+    character: Character
+    constructBuilding: GameState['constructBuilding']
+    toggleAutoGather?: () => void
+    isAutoEnabled?: boolean
+    autoUnlockLevel?: number
 }
 
-const BuildingCard = ({ type, name, icon: Icon, description, baseCost, character, constructBuilding }: BuildingCardProps) => {
+const BuildingCard = ({ type, name, icon: Icon, description, baseCost, character, constructBuilding, toggleAutoGather, isAutoEnabled, autoUnlockLevel }: BuildingCardProps) => {
     if (!character) return null
 
     const level = character.buildings[type]
@@ -28,47 +31,80 @@ const BuildingCard = ({ type, name, icon: Icon, description, baseCost, character
         character.resources.wood >= cost.wood &&
         character.resources.stone >= cost.stone
 
-        return (
-            <Card>
-                <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Icon className="h-5 w-5" />
-                            {name}
-                        </CardTitle>
+    return (
+        <Card>
+            <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <Icon className="h-5 w-5" />
+                        {name}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                        {autoUnlockLevel && (
+                            <div className="flex items-center" title="Reach Level 10 to unlock Auto-Gather">
+                                {level >= autoUnlockLevel ? (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={`h-6 px-2 text-xs ${isAutoEnabled ? 'text-green-400' : 'text-muted-foreground'}`}
+                                        onClick={toggleAutoGather}
+                                    >
+                                        {isAutoEnabled ? <ToggleRight className="h-4 w-4 mr-1" /> : <ToggleLeft className="h-4 w-4 mr-1" />}
+                                        Auto
+                                    </Button>
+                                ) : (
+                                    <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                        Auto Lv {autoUnlockLevel}
+                                    </span>
+                                )}
+                            </div>
+                        )}
                         <span className="text-sm font-bold bg-primary/10 text-primary px-2 py-1 rounded">Lvl {level}</span>
                     </div>
-                    <CardDescription>{description}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-2">
-                    <div className="text-xs space-y-1">
-                        <div className={character.gold < cost.credits ? "text-red-500" : "text-muted-foreground"}>
-                            Gold: {cost.credits}
-                        </div>
-                        <div className={character.resources.wood < cost.wood ? "text-red-500" : "text-muted-foreground"}>
-                            Wood: {cost.wood}
-                        </div>
-                        <div className={character.resources.stone < cost.stone ? "text-red-500" : "text-muted-foreground"}>
-                            Stone: {cost.stone}
-                        </div>
+                </div>
+                <CardDescription>{description}</CardDescription>
+            </CardHeader>
+            <CardContent className="pb-2">
+                <div className="text-xs space-y-1">
+                    <div className={character.gold < cost.credits ? "text-red-500" : "text-muted-foreground"}>
+                        Gold: {cost.credits}
                     </div>
-                </CardContent>
-                <CardFooter>
-                    <Button
-                        className="w-full"
-                        size="sm"
-                        disabled={!canAfford}
-                        onClick={() => constructBuilding(type, cost)}
-                    >
-                        Upgrade
-                    </Button>
-                </CardFooter>
-            </Card>
+                    <div className={character.resources.wood < cost.wood ? "text-red-500" : "text-muted-foreground"}>
+                        Wood: {cost.wood}
+                    </div>
+                    <div className={character.resources.stone < cost.stone ? "text-red-500" : "text-muted-foreground"}>
+                        Stone: {cost.stone}
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter>
+                <Button
+                    className="w-full"
+                    size="sm"
+                    disabled={!canAfford}
+                    onClick={() => constructBuilding(type, cost)}
+                >
+                    Upgrade
+                </Button>
+            </CardFooter>
+        </Card>
     )
 }
 
 export function KingdomView() {
     const { character, constructBuilding, hireWorker, fireWorker } = useGameStore()
+
+    const toggleAuto = (type: 'wood' | 'stone' | 'tech') => {
+        useGameStore.setState(state => ({
+            character: state.character ? {
+                ...state.character,
+                autoGathering: {
+                    ...state.character.autoGathering || { wood: false, stone: false, tech: false },
+                    [type]: !state.character.autoGathering?.[type]
+                }
+            } : null
+        }))
+    }
 
     if (!character) return null
 
@@ -291,6 +327,9 @@ export function KingdomView() {
                         baseCost={{ credits: 80, wood: 40, stone: 20 }}
                         character={character}
                         constructBuilding={constructBuilding}
+                        autoUnlockLevel={10}
+                        isAutoEnabled={character.autoGathering?.wood}
+                        toggleAutoGather={() => toggleAuto('wood')}
                     />
                     <BuildingCard
                         type="mine"
@@ -300,6 +339,9 @@ export function KingdomView() {
                         baseCost={{ credits: 100, wood: 30, stone: 40 }}
                         character={character}
                         constructBuilding={constructBuilding}
+                        autoUnlockLevel={10}
+                        isAutoEnabled={character.autoGathering?.stone}
+                        toggleAutoGather={() => toggleAuto('stone')}
                     />
                 </div>
             </div>
@@ -329,6 +371,9 @@ export function KingdomView() {
                         baseCost={{ credits: 200, wood: 150, stone: 100 }}
                         character={character}
                         constructBuilding={constructBuilding}
+                        autoUnlockLevel={10}
+                        isAutoEnabled={character.autoGathering?.tech}
+                        toggleAutoGather={() => toggleAuto('tech')}
                     />
                 </div>
             </div>

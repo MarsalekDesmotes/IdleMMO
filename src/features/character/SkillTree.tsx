@@ -2,12 +2,10 @@ import { useMemo } from "react"
 import { useGameStore } from "@/store/gameStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Lock, Check, Star, Sparkles } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Lock, Check, Star, Sparkles, Hammer } from "lucide-react"
 import { SKILLS, type SkillDefinition } from "@/data/skills"
-
-interface SkillNode extends SkillDefinition {
-    children: SkillNode[]
-}
+import { SkillView } from "./SkillView"
 
 export function SkillTree() {
     const { character, unlockSkill } = useGameStore()
@@ -21,23 +19,7 @@ export function SkillTree() {
     // Build tree structure with branches
     const skillTree = useMemo(() => {
         // Find root skills (no requirement)
-        const roots = skills.filter(s => !s.requiredSkill)
-        
-        // Build tree paths
-        const buildPath = (parent: SkillDefinition): SkillDefinition[] => {
-            const children = skills.filter(s => s.requiredSkill === parent.id)
-            if (children.length === 0) return [parent]
-            
-            const paths: SkillDefinition[][] = []
-            children.forEach(child => {
-                const childPath = buildPath(child)
-                childPath.forEach(path => {
-                    paths.push([parent, ...path])
-                })
-            })
-            
-            return paths.length > 0 ? paths[0] : [parent]
-        }
+
 
         // Get all unique skills in tree order
         const ordered: SkillDefinition[] = []
@@ -87,11 +69,10 @@ export function SkillTree() {
                 <div className="relative z-10">
                     <Button
                         variant={isUnlocked ? "default" : "outline"}
-                        className={`h-20 w-44 flex flex-col items-center justify-center gap-1 relative transition-all ${
-                            isLocked ? 'opacity-40 cursor-not-allowed' : 
-                            canUnlock ? 'hover:scale-105 border-primary shadow-lg shadow-primary/20' : 
-                            isUnlocked ? 'ring-2 ring-green-400/50 bg-green-950/20' : ''
-                        }`}
+                        className={`h-20 w-44 flex flex-col items-center justify-center gap-1 relative transition-all ${isLocked ? 'opacity-40 cursor-not-allowed' :
+                            canUnlock ? 'hover:scale-105 border-primary shadow-lg shadow-primary/20' :
+                                isUnlocked ? 'ring-2 ring-green-400/50 bg-green-950/20' : ''
+                            }`}
                         disabled={!canUnlock && !isUnlocked}
                         onClick={() => canUnlock && unlockSkill(skill.id)}
                     >
@@ -135,41 +116,60 @@ export function SkillTree() {
     }
 
     return (
-        <div className="grid gap-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-primary" />
-                            Skill Tree: {character.class}
-                        </span>
-                        <span className="text-sm font-normal text-muted-foreground flex items-center gap-1">
-                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                            {skillPoints} Points
-                        </span>
-                    </CardTitle>
-                    <CardDescription>Unlock skills in a branching tree structure. Each skill requires the previous one.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="relative overflow-x-auto py-8">
-                        <div className="flex flex-col items-center gap-20 min-w-max px-8">
-                            {/* Skill Tiers (Tree Levels) */}
-                            {tiers.map(([tierLevel, tierSkills], tierIndex) => (
-                                <div key={tierLevel} className="relative flex gap-12 items-start justify-center">
-                                    {tierSkills.map((skill) => {
-                                        const hasParent = !!skill.requiredSkill
-                                        return (
-                                            <div key={skill.id} className="relative">
-                                                {renderSkill(skill, hasParent)}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            ))}
+        <Tabs defaultValue="combat" className="w-full">
+            <div className="flex items-center justify-between mb-4">
+                <TabsList>
+                    <TabsTrigger value="combat" className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        Combat Skills
+                    </TabsTrigger>
+                    <TabsTrigger value="gathering" className="flex items-center gap-2">
+                        <Hammer className="h-4 w-4" />
+                        Gathering Skills
+                    </TabsTrigger>
+                </TabsList>
+                <span className="text-sm font-normal text-muted-foreground flex items-center gap-1">
+                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                    {skillPoints} Points
+                </span>
+            </div>
+
+            <TabsContent value="combat">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                            <span className="flex items-center gap-2">
+                                <Sparkles className="h-5 w-5 text-primary" />
+                                Skill Tree: {character.class}
+                            </span>
+                        </CardTitle>
+                        <CardDescription>Unlock skills in a branching tree structure. Each skill requires the previous one.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="relative overflow-x-auto py-8">
+                            <div className="flex flex-col items-center gap-20 min-w-max px-8">
+                                {/* Skill Tiers (Tree Levels) */}
+                                {tiers.map(([tierLevel, tierSkills]) => (
+                                    <div key={tierLevel} className="relative flex gap-12 items-start justify-center">
+                                        {tierSkills.map((skill) => {
+                                            const hasParent = !!skill.requiredSkill
+                                            return (
+                                                <div key={skill.id} className="relative">
+                                                    {renderSkill(skill, hasParent)}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="gathering">
+                <SkillView />
+            </TabsContent>
+        </Tabs>
     )
 }

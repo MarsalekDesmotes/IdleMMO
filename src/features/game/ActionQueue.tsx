@@ -1,7 +1,7 @@
 import { useGameStore, type Action } from "@/store/gameStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Map, Scroll, Hammer, Axe, Pickaxe, Lock, Sparkles } from "lucide-react"
+import { Map, Scroll, Hammer, Axe, Pickaxe, Lock, Sparkles, Fish } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const JOB_ACTIONS: Action[] = [
@@ -16,7 +16,20 @@ const JOB_ACTIONS: Action[] = [
         rewards: [
             { type: 'xp', value: 5 },
             { type: 'gold', value: 2 },
-            { type: 'resource', resourceId: 'wood', value: 5 }
+            { type: 'resource', resourceId: 'wood', value: 5 } // Tier 1 (Oak) treated as Currency
+        ]
+    },
+    {
+        id: 'chop_wood_yew',
+        name: 'Chop Yew Trees', // Tier 2
+        description: 'Harvest durable Yew wood.',
+        duration: 10,
+        staminaCost: 20,
+        requiredZone: 'outskirts',
+        requiredBuilding: { type: 'lumberMill', level: 2 },
+        rewards: [
+            { type: 'xp', value: 15 },
+            { type: 'item', itemId: 'wood_t2', value: 3 }
         ]
     },
     {
@@ -29,7 +42,20 @@ const JOB_ACTIONS: Action[] = [
         rewards: [
             { type: 'xp', value: 8 },
             { type: 'gold', value: 3 },
-            { type: 'resource', resourceId: 'stone', value: 3 }
+            { type: 'resource', resourceId: 'stone', value: 3 } // Tier 1 (Granite)
+        ]
+    },
+    {
+        id: 'mine_basalt',
+        name: 'Mine Basalt', // Tier 2
+        description: 'Extract hard Basalt rock.',
+        duration: 15,
+        staminaCost: 25,
+        requiredZone: 'outskirts',
+        requiredBuilding: { type: 'mine', level: 2 },
+        rewards: [
+            { type: 'xp', value: 20 },
+            { type: 'item', itemId: 'stone_t2', value: 2 }
         ]
     },
     {
@@ -139,6 +165,19 @@ const JOB_ACTIONS: Action[] = [
         ]
     },
     {
+        id: 'gather_ironwood',
+        name: 'Gather Ironwood', // Tier 3 (Iron Hills)
+        description: 'Chop the metallic trees of the hills.',
+        duration: 40,
+        staminaCost: 45,
+        requiredZone: 'iron_hills',
+        requiredBuilding: { type: 'lumberMill', level: 3 }, // Fixed: lumbermill -> lumberMill
+        rewards: [
+            { type: 'xp', value: 50 },
+            { type: 'item', itemId: 'wood_t3', value: 5 }
+        ]
+    },
+    {
         id: 'hunt_wolves',
         name: 'Hunt Mountain Wolves',
         description: 'Protect travelers from dangerous wolves.',
@@ -217,6 +256,18 @@ const JOB_ACTIONS: Action[] = [
         ]
     },
     {
+        id: 'gather_elder_wood',
+        name: 'Gather Elder Wood', // Tier 4 (Dark Forest)
+        description: 'Harvest ancient wood pulsating with magic.',
+        duration: 60,
+        staminaCost: 60,
+        requiredZone: 'dark_forest',
+        rewards: [
+            { type: 'xp', value: 150 },
+            { type: 'item', itemId: 'wood_t4', value: 3 }
+        ]
+    },
+    {
         id: 'collect_ancient_essence',
         name: 'Collect Ancient Essence',
         description: 'Gather powerful essence from ancient trees.',
@@ -284,7 +335,8 @@ export function ActionQueue() {
                                                 action.id.includes('runes') ? <Scroll className="h-5 w-5" /> :
                                                     action.id.includes('blacksmith') ? <Hammer className="h-5 w-5" /> :
                                                         action.id.includes('golem') ? <Sparkles className="h-5 w-5" /> :
-                                                            <Map className="h-5 w-5" />}
+                                                            action.id.includes('fish') ? <Fish className="h-5 w-5" /> :
+                                                                <Map className="h-5 w-5" />}
                                     </div>
                                     <div>
                                         <h4 className="font-medium text-sm flex items-center gap-2">

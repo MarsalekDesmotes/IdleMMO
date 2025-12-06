@@ -1,7 +1,8 @@
-import { useGameStore, type Equipment } from "@/store/gameStore"
+import { useGameStore, type Equipment, getItemColor } from "@/store/gameStore"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Shield, Sword, Shirt, HardHat } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export function EquipmentSlots() {
     const { character, unequipItem } = useGameStore()
@@ -13,14 +14,17 @@ export function EquipmentSlots() {
 
         return (
             <div className="flex flex-col items-center gap-1.5">
-                <div className="relative w-16 h-16 flex items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/10">
+                <div className={cn(
+                    "relative w-16 h-16 flex items-center justify-center rounded-lg border-2 bg-muted/10 transition-colors",
+                    item ? getItemColor(item.rarity) : "border-dashed border-muted-foreground/30"
+                )}>
                     {item ? (
                         <div className="w-full h-full flex flex-col items-center justify-center">
-                            {item.subtype === 'weapon' ? <Sword className="h-8 w-8 text-primary" /> :
-                                item.subtype === 'head' ? <HardHat className="h-8 w-8 text-primary" /> :
-                                    item.subtype === 'body' ? <Shirt className="h-8 w-8 text-primary" /> :
-                                        item.subtype === 'hands' ? <Shield className="h-8 w-8 text-primary" /> :
-                                            <Icon className="h-8 w-8 text-primary" />}
+                            {item.subtype === 'weapon' ? <Sword className="h-8 w-8" /> :
+                                item.subtype === 'head' ? <HardHat className="h-8 w-8" /> :
+                                    item.subtype === 'body' ? <Shirt className="h-8 w-8" /> :
+                                        item.subtype === 'hands' ? <Shield className="h-8 w-8" /> :
+                                            <Icon className="h-8 w-8" />}
                         </div>
                     ) : (
                         <Icon className="h-8 w-8 text-muted-foreground/30" />

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sword } from "lucide-react"
 import { SKILLS } from "@/data/skills"
+import { ENEMIES, type Enemy } from "@/data/enemies"
 
 export function CombatView() {
     const { character } = useGameStore()
@@ -15,42 +16,37 @@ export function CombatView() {
     const availableSkills = character ? SKILLS[character.class].filter(s => s.type === 'active' && character.unlockedSkills.includes(s.id)) : []
 
     const handleFindEnemy = () => {
-        const zoneEnemies: Record<string, Array<{ name: string; image: string; hpModifier: number; damageModifier: number }>> = {
-            outskirts: [
-                { name: 'Goblin Scout', image: '👺', hpModifier: 1, damageModifier: 1 },
-                { name: 'Giant Rat', image: '🐀', hpModifier: 0.8, damageModifier: 0.8 },
-                { name: 'Wild Boar', image: '🐗', hpModifier: 1.2, damageModifier: 1 }
-            ],
-            iron_hills: [
-                { name: 'Mountain Orc', image: '👹', hpModifier: 1.5, damageModifier: 1.2 },
-                { name: 'Stone Golem', image: '🗿', hpModifier: 2, damageModifier: 0.8 },
-                { name: 'Cave Troll', image: '👺', hpModifier: 1.8, damageModifier: 1.5 }
-            ],
-            dark_forest: [
-                { name: 'Shadow Creature', image: '👤', hpModifier: 1.3, damageModifier: 1.4 },
-                { name: 'Dark Wolf', image: '🐺', hpModifier: 1.1, damageModifier: 1.3 },
-                { name: 'Forest Wraith', image: '👻', hpModifier: 1.5, damageModifier: 1.2 }
-            ]
-        }
+        // Filter enemies by current zone
+        const zoneEnemies = ENEMIES.filter(e => e.zone === (character.currentZone || 'outskirts'))
 
-        const zoneEnemyPool = zoneEnemies[character.currentZone] || zoneEnemies.outskirts
-        const randomEnemyData = zoneEnemyPool[Math.floor(Math.random() * zoneEnemyPool.length)]
+        // Fallback if no enemies found (shouldn't happen)
+        const pool = zoneEnemies.length > 0 ? zoneEnemies : ENEMIES.filter(e => e.zone === 'outskirts')
 
-        const baseHp = 50 + (character.level * 10)
-        const baseDamage = 5 + character.level
+        // Pick random
+        const template = pool[Math.floor(Math.random() * pool.length)]
 
-        const randomEnemy = {
+        // Create instance with some variance
+        const levelVariance = Math.floor(Math.random() * 3) - 1 // -1, 0, or +1
+        const finalLevel = Math.max(1, template.level + levelVariance)
+
+        const combatEnemy: Enemy = {
             id: `enemy_${Date.now()}`,
-            name: randomEnemyData.name,
-            level: character.level,
-            hp: Math.floor(baseHp * randomEnemyData.hpModifier),
-            max_hp: Math.floor(baseHp * randomEnemyData.hpModifier),
-            damage: Math.floor(baseDamage * randomEnemyData.damageModifier),
-            image: randomEnemyData.image
+            name: template.name,
+            description: template.description || 'A hostile creature.',
+            level: finalLevel,
+            hp: template.hp, // Simple scaling could go here
+            max_hp: template.max_hp,
+            attack: template.attack, // Fixed: was damage
+            defense: template.defense,
+            xpReward: template.xpReward,
+            goldReward: template.goldReward,
+            zone: template.zone,
+            image: '👾', // TODO: Add images to Enemy DB
+            drops: template.drops
         }
 
-        startCombat(randomEnemy)
-        useGameStore.getState().updateQuestProgress('kill', randomEnemy.name, 1)
+        startCombat(combatEnemy)
+        useGameStore.getState().updateQuestProgress('kill', combatEnemy.name, 1)
     }
 
     if (phase === 'idle') {

@@ -9,15 +9,19 @@ import { GameLog } from "@/features/game/GameLog"
 import { InventoryGrid } from "@/features/inventory/InventoryGrid"
 import { EquipmentSlots } from "@/features/inventory/EquipmentSlots"
 import { CraftingView } from "@/features/crafting/CraftingView"
-import { CombatView } from "@/features/combat/CombatView"
-import { SkillTree } from "@/features/character/SkillTree"
 import { NPCView } from "@/features/world/NPCView"
 import { MapView } from "@/features/map/MapView"
 import { KingdomView } from "@/features/kingdom/KingdomView"
-import { ChatView } from "@/features/chat/ChatView"
+import { CombatView } from "@/features/combat/CombatView"
+import { ArenaView } from "@/features/combat/ArenaView"
+import { SkillTree } from "@/features/character/SkillTree"
+
+import { LeaderboardView } from "@/features/leaderboard/LeaderboardView"
 import { DailyQuests } from "@/features/quests/DailyQuests"
 import { HourlyReward } from "@/features/rewards/HourlyReward"
 import { PeriodicRewards } from "@/features/rewards/PeriodicRewards"
+import { MarketView } from "@/features/economy/MarketView"
+import { GuildView } from "@/features/social/GuildView"
 import { DebugPanel } from "@/components/debug/DebugPanel"
 import { ResourceHeader } from "@/components/layout/ResourceHeader"
 import { AppShell } from "@/components/layout/AppShell"
@@ -25,6 +29,13 @@ import { EventBanner } from "@/components/game/EventBanner"
 import { GuestAccountLink } from "@/components/game/GuestAccountLink"
 import { AvatarSelection } from "@/features/character/AvatarSelection"
 import { AuthPage } from "@/features/auth/AuthPage"
+import { ShopView } from "@/features/shop/ShopView"
+import { RebirthView } from "@/features/rebirth/RebirthView"
+import { PetView } from "@/features/pets/PetView"
+import { DungeonView } from "@/features/dungeon/DungeonView"
+import { CookingView } from "@/features/skills/CookingView"
+import { EnhancementView } from "@/features/blacksmith/EnhancementView"
+import { OfflineProgressModal } from "@/components/OfflineProgressModal"
 
 function App() {
   const { user, isGuest } = useAuthStore()
@@ -71,7 +82,6 @@ function App() {
               <HourlyReward />
               <DailyQuests />
               <GameLog />
-              <ChatView />
             </div>
           </div>
         )}
@@ -111,9 +121,50 @@ function App() {
           <KingdomView />
         )}
 
+        {currentView === 'leaderboard' && (
+          <LeaderboardView />
+        )}
+
+        {currentView === 'arena' && (
+          <ArenaView />
+        )}
+
+        {currentView === 'market' && (
+          <MarketView />
+        )}
+
+        {currentView === 'guild' && (
+          <GuildView />
+        )}
+
+        {currentView === 'shop' && (
+          <ShopView />
+        )}
+
+        {currentView === 'rebirth' && (
+          <RebirthView />
+        )}
+
+        {currentView === 'pets' && (
+          <PetView />
+        )}
+
+        {currentView === 'dungeon' && (
+          <DungeonView />
+        )}
+
+        {currentView === 'cooking' && (
+          <CookingView />
+        )}
+
+        {currentView === 'enhancement' && (
+          <EnhancementView />
+        )}
+
       </div>
 
       <DebugPanel />
+      <OfflineProgressModal />
     </AppShell>
   )
 }

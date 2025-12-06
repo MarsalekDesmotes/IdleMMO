@@ -1,9 +1,11 @@
 import { useMemo } from "react"
 import { useGameStore } from "@/store/gameStore"
-import { Coins, Trees, Mountain, Cpu, TrendingUp } from "lucide-react"
+import { useUIStore } from "@/store/uiStore"
+import { Coins, Trees, Mountain, Cpu, TrendingUp, Trophy } from "lucide-react"
 
 export function ResourceHeader() {
     const { character } = useGameStore()
+    const { setView } = useUIStore()
 
     const resourceRates = useMemo(() => {
         if (!character) return { wood: 0, stone: 0, tech: 0 }
@@ -36,10 +38,20 @@ export function ResourceHeader() {
 
     return (
         <div className="flex w-full items-center justify-between rounded-lg border bg-card/50 p-3 shadow-sm backdrop-blur-md">
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-4 md:gap-6">
                 <div className="flex items-center gap-2 border-r pr-6">
                     <span className="text-sm font-bold text-primary">Lvl {character.level}</span>
                 </div>
+
+                <div
+                    className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded transition-colors"
+                    onClick={() => setView('leaderboard')}
+                    title="View Leaderboard"
+                >
+                    <Trophy className="h-4 w-4 text-purple-500" />
+                    <span className="font-bold text-purple-500">{character.honor?.lifetime || 0}</span>
+                </div>
+
                 <div className="flex items-center gap-2">
                     <Coins className="h-4 w-4 text-yellow-500" />
                     <span className="font-bold text-yellow-500">{character.gold}</span>

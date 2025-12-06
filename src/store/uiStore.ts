@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type View = 'dashboard' | 'inventory' | 'crafting' | 'combat' | 'world' | 'skills' | 'chat' | 'map' | 'kingdom' | 'rewards'
+export type View = 'dashboard' | 'combat' | 'inventory' | 'crafting' | 'skills' | 'map' | 'world' | 'kingdom' | 'market' | 'guild' | 'settings' | 'leaderboard' | 'arena' | 'rewards' | 'shop' | 'rebirth' | 'pets' | 'dungeon' | 'cooking' | 'enhancement'
 
 interface UIState {
     currentView: View

@@ -6,15 +6,11 @@ import { useEventStore } from './eventStore'
 export type CombatTurn = 'player' | 'enemy'
 export type CombatPhase = 'idle' | 'active' | 'victory' | 'defeat'
 
-export interface Enemy {
-    id: string
-    name: string
-    level: number
-    hp: number
-    max_hp: number
-    damage: number
-    image: string // Placeholder for now, maybe use a generic monster image or emoji
-}
+import type { Enemy } from '@/data/enemies'
+import { ITEMS } from '@/data/items'
+
+// Re-export or just use the imported one
+export type { Enemy }
 
 export interface Skill {
     id: string
@@ -80,13 +76,14 @@ export const useCombatStore = create<CombatState>((set, get) => ({
 
         // Handle Basic Attack
         if (skillId === 'basic_attack') {
-            const baseDmg = Math.floor(character.level + (character.stats?.strength || 0) / 2 + 2)
-            
+            const stats = useGameStore.getState().getDerivedStats()
+            const baseDmg = Math.floor(character.level + stats.strength / 2 + 2)
+
             // Critical hit chance (5% base + agility bonus)
-            const critChance = 0.05 + ((character.stats?.agility || 0) * 0.001)
+            const critChance = 0.05 + (stats.agility * 0.001)
             const isCrit = Math.random() < critChance
             const dmg = isCrit ? Math.floor(baseDmg * 2) : baseDmg
-            
+
             let logMsg = `You attacked.`
             if (isCrit) {
                 logMsg += ` Critical Hit!`
@@ -106,14 +103,28 @@ export const useCombatStore = create<CombatState>((set, get) => ({
                 useGameStore.getState().addXp(Math.floor(state.enemy!.level * 20 * xpMult))
                 const goldEarned = state.enemy!.level * 10
                 useGameStore.getState().debugAddGold(goldEarned)
-                
+                const honorEarned = 5 + Math.floor(state.enemy!.level * 2)
+                useGameStore.getState().addHonor(honorEarned)
+
+                // Drop Logic
+                state.enemy!.drops.forEach(drop => {
+                    if (Math.random() < drop.chance) {
+                        const item = ITEMS[drop.itemId]
+                        if (item) {
+                            useGameStore.getState().addItem(item, 1)
+                            // We should probably log this better
+                            set(s => ({ combatLog: [...s.combatLog, `Loot: ${item.name}`] }))
+                        }
+                    }
+                })
+
                 // Track daily quest progress for kills
                 import('./dailyQuestStore').then(({ useDailyQuestStore }) => {
                     useDailyQuestStore.getState().updateDailyQuestProgress('kill', 'any', 1)
                 }).catch(() => {
                     // Daily quest store not available
                 })
-                
+
                 return
             }
 
@@ -196,12 +207,14 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         const { character } = useGameStore.getState()
         if (!character) return
 
-        const baseDmg = state.enemy!.damage
-        
+        const baseDmg = state.enemy!.attack
+
+        const stats = useGameStore.getState().getDerivedStats()
+
         // Dodge chance (agility based)
-        const dodgeChance = 0.03 + ((character.stats?.agility || 0) * 0.002)
+        const dodgeChance = 0.03 + (stats.agility * 0.002)
         const isDodged = Math.random() < dodgeChance
-        
+
         if (isDodged) {
             set({
                 combatLog: [...state.combatLog, `${state.enemy!.name} attacks, but you dodged!`],
@@ -211,16 +224,16 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         }
 
         // Block chance (defense based)
-        const blockChance = 0.02 + ((character.stats?.defense || 0) * 0.001)
+        const blockChance = 0.02 + (stats.defense * 0.001)
         const isBlocked = Math.random() < blockChance
         const dmg = isBlocked ? Math.floor(baseDmg * 0.5) : baseDmg
-        
+
         let logMsg = `${state.enemy!.name} attacks`
         if (isBlocked) {
             logMsg += `, but you blocked!`
         }
         logMsg += ` for ${dmg} damage.`
-        
+
         const newPlayerHp = state.playerHp - dmg
 
         if (newPlayerHp <= 0) {

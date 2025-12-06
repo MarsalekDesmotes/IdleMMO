@@ -2,9 +2,10 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { isSupabaseAvailable, safeSupabaseCall } from '@/lib/supabase'
 import { SKILLS } from '@/data/skills'
+import { ITEMS } from '@/data/items'
 
 export type CharacterClass = 'Paladin' | 'Archmage' | 'Ranger'
-export type ZoneId = 'outskirts' | 'iron_hills' | 'dark_forest'
+export type ZoneId = 'outskirts' | 'iron_hills' | 'dark_forest' | 'volcanic_peaks' | 'crystal_caves' | 'sky_citadel'
 export type Gender = 'male' | 'female'
 
 export interface Item {
@@ -19,9 +20,28 @@ export interface Item {
         defense?: number
         attack?: number
         speed?: number
+        hpRegen?: number
+        strength?: number
+        intelligence?: number
+        agility?: number
+        critChance?: number
+        hpBonus?: number // For Food
+        duration?: number // For Potions
     }
     classRestriction?: CharacterClass[]
     slot?: 'head' | 'body' | 'hands' | 'weapon' // Added for compatibility
+    rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+    enhancement?: number // +0 to +10
+}
+
+export const getItemColor = (rarity: Item['rarity']) => {
+    switch (rarity) {
+        case 'uncommon': return 'text-green-500 border-green-500'
+        case 'rare': return 'text-blue-500 border-blue-500'
+        case 'epic': return 'text-purple-500 border-purple-500'
+        case 'legendary': return 'text-orange-500 border-orange-500'
+        default: return 'text-muted-foreground border-border'
+    }
 }
 
 export interface Equipment {
@@ -85,6 +105,7 @@ export interface Buildings {
 }
 
 export interface Character {
+    id: string
     name: string
     class: CharacterClass
     level: number
@@ -117,18 +138,58 @@ export interface Character {
         researcher: number
     }
     maxPopulation: number
+    honor: {
+        daily: number
+        weekly: number
+        lifetime: number
+    }
+    skills: {
+        woodcutting: { level: number; xp: number; max_xp: number }
+        mining: { level: number; xp: number; max_xp: number }
+        research: { level: number; xp: number; max_xp: number }
+        fishing?: { level: number; xp: number; max_xp: number }
+        cooking?: { level: number; xp: number; max_xp: number }
+    }
+    lastSavedAt?: number
+    rebirthCount: number
+    ancientShards: number
+    templeUpgrades?: {
+        xpBoost: number // +X% XP
+        resourceCap: number // +X Cap
+        autoSpeed: number // +X% Speed
+    }
+    diamonds: number
+    isPrime: boolean
+    primeExpiresAt?: string | null
+    autoGathering?: {
+        wood: boolean
+        stone: boolean
+        tech: boolean
+    }
+    pets: string[] // List of unlocked pet IDs
+    equippedPet: string | null
+}
+
+export const XP_TABLE = [0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200] // Simple curve for now
+
+export interface Reward {
+    type: 'xp' | 'gold' | 'item' | 'resource';
+    value: number;
+    itemId?: string;
+    resourceId?: 'wood' | 'stone' | 'tech';
 }
 
 export interface Action {
     id: string
     name: string
-    description?: string
+    description: string
     duration: number
-    rewards: { type: 'xp' | 'gold' | 'item' | 'resource'; value: number; itemId?: string; resourceId?: 'wood' | 'stone' | 'tech' }[]
     staminaCost: number
-    resourceReward?: { resource: 'wood' | 'stone' | 'tech'; amount: number }
-    requiredBuilding?: { type: keyof Buildings; level: number }
+    rewards: Reward[]
     requiredZone?: ZoneId
+    requiredBuilding?: { type: keyof Buildings; level: number }
+    resourceReward?: { resource: 'wood' | 'stone' | 'tech'; amount: number } // Legacy
+    costItems?: { itemId: string; amount: number }[] // Added for Crafting/Cooking in Queue
 }
 
 export interface QueueItem {
@@ -144,6 +205,14 @@ export interface GameState {
     activeAction: QueueItem | null
     quests: Quest[]
     npcs: NPC[]
+
+    offlineGains: {
+        wood: number
+        stone: number
+        tech: number
+        seconds: number
+    } | null
+    clearOfflineGains: () => void
 
     // Actions
     createCharacter: (name: string, charClass: CharacterClass, gender: Gender, avatar?: string) => void
@@ -162,9 +231,11 @@ export interface GameState {
     moveItem: (fromIndex: number, toIndex: number) => void
     useItem: (item: Item) => void
     craftItem: (recipe: Recipe) => void
+    enhanceItem: (itemId: string) => Promise<{ success: boolean; destroyed: boolean; newLevel: number }>
 
     // Progression
     addXp: (amount: number) => void
+    addGold: (amount: number) => void
     levelUp: () => void
     unlockSkill: (skillId: string) => void
 
@@ -195,6 +266,18 @@ export interface GameState {
     debugAddGold: (amount: number) => void
     debugLevelUp: () => void
     debugRefillStamina: () => void
+    addHonor: (amount: number) => void
+    addSkillXp: (skill: 'woodcutting' | 'mining' | 'research', amount: number) => void
+    performRebirth: () => void
+    buyTempleUpgrade: (type: 'xpBoost' | 'resourceCap' | 'autoSpeed') => void
+
+    addDiamonds: (amount: number) => void
+    spendDiamonds: (amount: number) => boolean
+    setPrimeStatus: (isPrime: boolean, expiresAt?: string | null) => void
+
+    // Pets
+    hatchPet: () => void
+    equipPet: (petId: string) => void
 }
 
 // Initial Data
@@ -399,6 +482,10 @@ export const useGameStore = create<GameState>()(
         (set, get) => ({
             character: null,
             logs: [],
+            offlineGains: null,
+            clearOfflineGains: () => set({ offlineGains: null }),
+
+            // Action Queue
             actionQueue: [],
             activeAction: null,
             quests: INITIAL_QUESTS,
@@ -413,6 +500,7 @@ export const useGameStore = create<GameState>()(
 
                 set({
                     character: {
+                        id: crypto.randomUUID(),
                         name,
                         class: charClass,
                         level: 1,
@@ -431,7 +519,20 @@ export const useGameStore = create<GameState>()(
                         customAvatar: avatar,
                         workers: { woodsman: 0, miner: 0, researcher: 0 },
                         maxPopulation: 5, // Base population limit (Town Hall level 1)
-                        ...initialStats[charClass]
+                        honor: { daily: 0, weekly: 0, lifetime: 0 },
+                        skills: {
+                            woodcutting: { level: 1, xp: 0, max_xp: 100 },
+                            mining: { level: 1, xp: 0, max_xp: 100 },
+                            research: { level: 1, xp: 0, max_xp: 100 }
+                        },
+                        ...initialStats[charClass],
+                        rebirthCount: 0,
+                        ancientShards: 0,
+                        diamonds: 0,
+                        isPrime: false,
+                        primeExpiresAt: null,
+                        pets: [],
+                        equippedPet: null
                     },
                     logs: [{ id: crypto.randomUUID(), message: `Character ${name} created.`, type: 'success', timestamp: Date.now() }]
                 })
@@ -450,6 +551,24 @@ export const useGameStore = create<GameState>()(
 
                 if (character.stamina < action.staminaCost) {
                     get().addLog("Not enough stamina!", 'warning')
+                    return
+                }
+
+                // Check for item costs
+                if (action.costItems) {
+                    for (const cost of action.costItems) {
+                        const invItem = character.inventory.find(i => i.item.id === cost.itemId)
+                        if (!invItem || invItem.count < cost.amount) {
+                            get().addLog(`Not enough ${cost.itemId} to start ${action.name}!`, 'warning')
+                            return
+                        }
+                    }
+                }
+
+                // Queue Limit: 10 for Free, Unlimited for Prime
+                const QUEUE_LIMIT = character.isPrime ? 999 : 10
+                if (actionQueue.length >= QUEUE_LIMIT) {
+                    get().addLog(`Queue full! Upgrade to Nexus Prime for unlimited queue.`, 'warning')
                     return
                 }
 
@@ -509,6 +628,27 @@ export const useGameStore = create<GameState>()(
                 if (!character || !activeItem || activeItem.id !== itemId) return
 
                 const action = activeItem.action
+
+                // Validate Costs (Logic check just before completion to ensure no exploits/state change)
+                if (action.costItems) {
+                    for (const cost of action.costItems) {
+                        const invItem = character.inventory.find(i => i.item.id === cost.itemId)
+                        if (!invItem || invItem.count < cost.amount) {
+                            get().addLog(`Failed to ${action.name}: Missing ${cost.itemId}`, 'error')
+                            // Cancel/Remove execution without reward
+                            set(state => ({
+                                activeAction: null,
+                                actionQueue: state.actionQueue.slice(1) // Next
+                            }))
+                            return
+                        }
+                    }
+                    // Deduct Costs
+                    action.costItems.forEach(cost => {
+                        get().removeItem(cost.itemId, cost.amount)
+                    })
+                }
+
                 let logMessage = `Completed ${action.name}.`
                 let xpGained = 0
                 let goldGained = 0
@@ -524,7 +664,7 @@ export const useGameStore = create<GameState>()(
                     if (reward.type === 'xp') {
                         xpGained += reward.value
                         logMessage += ` +${reward.value} XP`
-                    } else                     if (reward.type === 'gold') {
+                    } else if (reward.type === 'gold') {
                         goldGained += reward.value
                         // Track daily quest gold earned
                         import('./dailyQuestStore').then(({ useDailyQuestStore }) => {
@@ -551,7 +691,45 @@ export const useGameStore = create<GameState>()(
                     }
                 })
 
-                if (xpGained > 0) get().addXp(xpGained)
+                // Guild Buffs
+                let xpMultiplier = 1
+                let goldMultiplier = 1
+
+                // We use dynamic import to avoid circular dependency since gameStore -> guildStore -> gameStore is possible
+                // But better: useGuildStore.getState() is safe if initialized.
+                // However, guildStore needs character.id which is circular.
+                // Simpler approach: Check guild level from a simplified helper or assume safe access.
+                import('./guildStore').then(({ useGuildStore }) => {
+                    const buffs = useGuildStore.getState().getLevelBuffs()
+                    if (buffs.xpBonus > 0) xpMultiplier += buffs.xpBonus
+                    if (buffs.goldBonus > 0) goldMultiplier += buffs.goldBonus
+                }).catch(() => { })
+
+                // Pet Buffs
+                let resourceMultiplier = { wood: 1, stone: 1, tech: 1 }
+                const equippedPetId = character?.equippedPet
+                if (equippedPetId) {
+                    import('../data/pets').then(({ PETS }) => {
+                        const pet = PETS.find(p => p.id === equippedPetId)
+                        if (pet && pet.bonus.type === 'resource' && pet.bonus.resourceId) {
+                            resourceMultiplier[pet.bonus.resourceId] += pet.bonus.multiplier
+                        } else if (pet && pet.bonus.type === 'xp') {
+                            xpMultiplier += pet.bonus.multiplier
+                        } else if (pet && pet.bonus.type === 'gold') {
+                            goldMultiplier += pet.bonus.multiplier
+                        }
+                    })
+                }
+
+                const finalXp = Math.floor(xpGained * xpMultiplier)
+                const finalGold = Math.floor(goldGained * goldMultiplier)
+
+                // Apply resource multiplier
+                const woodGained = Math.floor(resourcesGained.wood * resourceMultiplier.wood)
+                const stoneGained = Math.floor(resourcesGained.stone * resourceMultiplier.stone)
+                const techGained = Math.floor(resourcesGained.tech * resourceMultiplier.tech)
+
+                if (finalXp > 0) get().addXp(finalXp)
 
                 set((state) => {
                     const nextQueue = state.actionQueue.slice(1)
@@ -560,29 +738,63 @@ export const useGameStore = create<GameState>()(
                     }
 
                     return {
-                        activeAction: null, // Deprecated, keeping for safety
+                        activeAction: null,
                         actionQueue: nextQueue,
                         character: state.character ? {
                             ...state.character,
-                            gold: state.character.gold + goldGained,
+                            gold: state.character.gold + finalGold,
                             resources: {
-                                wood: state.character.resources.wood + resourcesGained.wood,
-                                stone: state.character.resources.stone + resourcesGained.stone,
-                                tech: state.character.resources.tech + resourcesGained.tech,
+                                wood: state.character.resources.wood + woodGained,
+                                stone: state.character.resources.stone + stoneGained,
+                                tech: state.character.resources.tech + techGained,
                             }
                         } : null
                     }
                 })
 
                 get().addLog(logMessage, 'success')
-                
+
+                // Nexus Prime Auto-Queue Logic
+                const currentState = get()
+                if (currentState.character?.isPrime && currentState.actionQueue.length === 0) {
+                    // Check stamina for re-queue
+                    if (currentState.character.stamina >= action.staminaCost) {
+                        get().addToQueue(action)
+                        // get().addLog("Prime Auto-Queue activated!", 'info') // Optional log
+                    } else {
+                        get().addLog("Prime Auto-Queue paused: Low Stamina", 'warning')
+                    }
+                }
+
+                // Building-Based Auto-Gathering Logic
+                if (currentState.character && currentState.actionQueue.length === 0) {
+                    // Check if an auto-gather is enabled matching the just-finished action
+                    // This simple check assumes specific action IDs or types for gathering
+                    // Let's assume action IDs: 'chop_wood', 'mine_stone', 'research_tech'
+
+                    let shouldAuto = false
+                    const auto = currentState.character.autoGathering || { wood: false, stone: false, tech: false }
+
+                    if (action.id === 'chop_wood' && auto.wood) shouldAuto = true
+                    if (action.id === 'mine_stone' && auto.stone) shouldAuto = true
+                    if (action.id === 'research_tech' && auto.tech) shouldAuto = true
+
+                    if (shouldAuto) {
+                        if (currentState.character.stamina >= action.staminaCost) {
+                            get().addToQueue(action)
+                        } else {
+                            // Optional: log low stamina for auto-gather? Might spam.
+                        }
+                    }
+                }
+
                 // Track daily quest progress for actions
                 import('./dailyQuestStore').then(({ useDailyQuestStore }) => {
                     useDailyQuestStore.getState().updateDailyQuestProgress('resource', 'actions_completed', 1)
                 }).catch(() => {
                     // Daily quest store not available
                 })
-                
+
                 get().saveToCloud()
             },
 
@@ -683,8 +895,81 @@ export const useGameStore = create<GameState>()(
                     get().regenerateHp(50)
                     get().removeItem(item.id, 1)
                     get().addLog("Used Health Potion. +50 HP", 'success')
+                } else if (item.stats?.hpRegen) {
+                    // Food
+                    get().regenerateHp(item.stats.hpRegen)
+                    get().removeItem(item.id, 1)
+                    get().addLog(`Ate ${item.name}. +${item.stats.hpRegen} HP`, 'success')
                 } else {
                     get().addLog(`Cannot use ${item.name}`, 'warning')
+                }
+            },
+
+            enhanceItem: async (itemId) => {
+                const { character } = get()
+                if (!character) return { success: false, destroyed: false, newLevel: 0 }
+
+                const invItemIndex = character.inventory.findIndex(i => i.item.id === itemId)
+                let item = invItemIndex >= 0 ? character.inventory[invItemIndex].item : null
+
+                if (!item) {
+                    get().addLog("Item must be in inventory to enhance.", 'warning')
+                    return { success: false, destroyed: false, newLevel: 0 }
+                }
+
+                const currentLevel = item.enhancement || 0
+                if (currentLevel >= 10) {
+                    get().addLog("Item is already at max level!", 'warning')
+                    return { success: false, destroyed: false, newLevel: currentLevel }
+                }
+
+                const goldCost = 100 * (currentLevel + 1) * (item.value || 1)
+                if (character.gold < goldCost) {
+                    get().addLog(`Not enough gold! Need ${goldCost} gold.`, 'warning')
+                    return { success: false, destroyed: false, newLevel: currentLevel }
+                }
+
+                set(state => ({
+                    character: state.character ? { ...state.character, gold: state.character.gold - goldCost } : null
+                }))
+
+                const rates = [100, 90, 80, 70, 60, 50, 30, 15, 5, 1]
+                const successRate = rates[currentLevel] || 1
+                const roll = Math.random() * 100
+                const isSuccess = roll < successRate
+
+                if (isSuccess) {
+                    const newLevel = currentLevel + 1
+                    const newItem = { ...item, enhancement: newLevel }
+
+                    if (newItem.stats) {
+                        newItem.stats = { ...newItem.stats }
+                        if (newItem.stats.attack) newItem.stats.attack = Math.floor(newItem.stats.attack * 1.1)
+                        if (newItem.stats.defense) newItem.stats.defense = Math.floor(newItem.stats.defense * 1.1)
+                    }
+
+                    set(state => {
+                        const newInventory = [...(state.character?.inventory || [])]
+                        newInventory[invItemIndex] = { ...newInventory[invItemIndex], item: newItem }
+                        return { character: { ...state.character!, inventory: newInventory } }
+                    })
+
+                    get().addLog(`SUCCESS! Upgraded to +${newLevel}!`, 'success')
+                    return { success: true, destroyed: false, newLevel: newLevel }
+
+                } else {
+                    set(state => {
+                        const newInventory = [...(state.character?.inventory || [])]
+                        if (newInventory[invItemIndex].count > 1) {
+                            newInventory[invItemIndex].count -= 1
+                        } else {
+                            newInventory.splice(invItemIndex, 1)
+                        }
+                        return { character: { ...state.character!, inventory: newInventory } }
+                    })
+
+                    get().addLog(`FAILURE! The item BROKE into dust!`, 'error')
+                    return { success: false, destroyed: true, newLevel: 0 }
                 }
             },
 
@@ -776,14 +1061,14 @@ export const useGameStore = create<GameState>()(
                 get().addXp(recipe.xpReward)
                 get().addLog(`Crafted ${recipe.result.name}`, 'success')
                 get().updateQuestProgress('item', recipe.result.id, 1)
-                
+
                 // Track daily quest progress for crafting
                 import('./dailyQuestStore').then(({ useDailyQuestStore }) => {
                     useDailyQuestStore.getState().updateDailyQuestProgress('resource', 'items_crafted', 1)
                 }).catch(() => {
                     // Daily quest store not available
                 })
-                
+
                 get().saveToCloud()
             },
 
@@ -800,14 +1085,14 @@ export const useGameStore = create<GameState>()(
                         newLevel++
                         newMaxXp = Math.floor(newMaxXp * 1.5)
                         newSkillPoints++
-                        
+
                         // Increase queue slots every 5 levels (3 base + 1 every 5 levels)
                         const newMaxQueueSlots = 3 + Math.floor(newLevel / 5)
-                        
+
                         get().addLog(`Level Up! You are now level ${newLevel}. Queue slots increased to ${newMaxQueueSlots}!`, 'success')
                         // Update quest progress for level type quests
                         get().updateQuestProgress('level', newLevel.toString(), 1)
-                        
+
                         return {
                             character: {
                                 ...state.character,
@@ -892,7 +1177,7 @@ export const useGameStore = create<GameState>()(
                             [type]: newLevel
                         },
                         // Update max population when Town Hall is upgraded
-                        maxPopulation: type === 'townHall' 
+                        maxPopulation: type === 'townHall'
                             ? 5 + (newLevel - 1) * 3  // 5 base + 3 per level
                             : state.character.maxPopulation
                     } : null
@@ -1158,31 +1443,70 @@ export const useGameStore = create<GameState>()(
                 let stoneProduced = 0
                 let techProduced = 0
 
-                // Woodsmen produce wood (1 wood per worker per second)
                 if (character.workers.woodsman > 0) {
                     woodProduced = character.workers.woodsman
                     // Lumber Mill bonus: +50% per level
                     if (character.buildings.lumberMill > 0) {
                         woodProduced = Math.floor(woodProduced * (1 + character.buildings.lumberMill * 0.5))
                     }
+
+                    // Auto-Gathering Logic with Tiers
+                    const woodLevel = character.skills.woodcutting.level
+                    // Chance for higher tier wood: 10% chance to get tier = (level / 10)
+                    // Simplified: Just 1% per worker for now, but we check level to determine WHAT drops
+                    const maxWoodTier = Math.min(10, Math.floor(woodLevel / 5) + 1)
+
+                    // Rare Drop Logic (Enhanced)
+                    if (Math.random() < 0.01 * character.workers.woodsman) {
+                        const tier = Math.floor(Math.random() * maxWoodTier) + 1
+                        const itemId = `wood_t${tier}`
+                        const drop = ITEMS[itemId] || ITEMS['wood_t1'] // Fallback
+                        get().addItem(drop, 1)
+                        get().addLog(`Your woodsmen found ${drop.name}!`, 'success')
+                    }
+                    get().addSkillXp('woodcutting', woodProduced)
                 }
 
-                // Miners produce stone (1 stone per worker per second)
                 if (character.workers.miner > 0) {
                     stoneProduced = character.workers.miner
                     // Mine bonus: +50% per level
                     if (character.buildings.mine > 0) {
                         stoneProduced = Math.floor(stoneProduced * (1 + character.buildings.mine * 0.5))
                     }
+
+                    const mineLevel = character.skills.mining.level
+                    const maxStoneTier = Math.min(10, Math.floor(mineLevel / 5) + 1)
+
+                    // Rare Drop: Gemstone or High Tier Stone
+                    if (Math.random() < 0.01 * character.workers.miner) {
+                        const tier = Math.floor(Math.random() * maxStoneTier) + 1
+                        const itemId = `stone_t${tier}`
+                        const drop = ITEMS[itemId] || ITEMS['stone_t1']
+                        get().addItem(drop, 1)
+                        get().addLog(`Your miners found ${drop.name}!`, 'success')
+                    }
+                    get().addSkillXp('mining', stoneProduced)
                 }
 
-                // Researchers produce tech (0.5 tech per worker per second)
                 if (character.workers.researcher > 0) {
-                    techProduced = Math.floor(character.workers.researcher * 0.5)
+                    techProduced = character.workers.researcher
                     // Library bonus: +25% per level
                     if (character.buildings.library > 0) {
                         techProduced = Math.floor(techProduced * (1 + character.buildings.library * 0.25))
                     }
+
+                    const researchLevel = character.skills.research.level
+                    const maxTechTier = Math.min(10, Math.floor(researchLevel / 5) + 1)
+
+                    // Rare Drop: Data Crystal or High Tier Tech
+                    if (Math.random() < 0.01 * character.workers.researcher) {
+                        const tier = Math.floor(Math.random() * maxTechTier) + 1
+                        const itemId = `tech_t${tier}`
+                        const drop = ITEMS[itemId] || ITEMS['tech_t1']
+                        get().addItem(drop, 1)
+                        get().addLog(`Your researchers decoded ${drop.name}!`, 'success')
+                    }
+                    get().addSkillXp('research', techProduced)
                 }
 
                 if (woodProduced > 0 || stoneProduced > 0 || techProduced > 0) {
@@ -1197,6 +1521,190 @@ export const useGameStore = create<GameState>()(
                         } : null
                     }))
                 }
+            },
+
+            addSkillXp: (skill, amount) => {
+                const { character } = get()
+                if (!character) return
+
+                const currentSkill = character.skills[skill]
+                let newXp = currentSkill.xp + amount
+                let newLevel = currentSkill.level
+                let newMaxXp = currentSkill.max_xp
+
+                while (newXp >= newMaxXp) {
+                    newXp -= newMaxXp
+                    newLevel++
+                    newMaxXp = Math.floor(newMaxXp * 1.5)
+                    get().addLog(`Your ${skill} skill reached level ${newLevel}!`, 'success')
+                }
+
+                set((state) => ({
+                    character: state.character ? {
+                        ...state.character,
+                        skills: {
+                            ...state.character.skills,
+                            [skill]: {
+                                level: newLevel,
+                                xp: newXp,
+                                max_xp: newMaxXp
+                            }
+                        }
+                    } : null
+                }))
+            },
+
+            addGold: (amount: number) => {
+                set((state) => {
+                    if (!state.character) return state
+                    return { character: { ...state.character, gold: state.character.gold + amount } }
+                })
+                get().addLog(`Received ${amount} Gold`, 'loot')
+            },
+
+
+
+            performRebirth: () => {
+                const { character } = get()
+                if (!character) return
+
+                if (character.level < 50) {
+                    get().addLog("You must be at least level 50 to rebirth!", "error")
+                    return
+                }
+
+                const shardsEarned = character.level
+                const oldLevel = character.level
+
+                // Reset Stats based on Class
+                const initialStats = {
+                    Paladin: { hp: 120, max_hp: 120, stamina: 100, max_stamina: 100, mana: 50, max_mana: 50 },
+                    Archmage: { hp: 80, max_hp: 80, stamina: 80, max_stamina: 80, mana: 150, max_mana: 150 },
+                    Ranger: { hp: 100, max_hp: 100, stamina: 120, max_stamina: 120, mana: 75, max_mana: 75 },
+                }
+
+                const baseStats = initialStats[character.class]
+
+                set((state) => ({
+                    character: state.character ? {
+                        ...state.character,
+                        // Reset Level & XP
+                        level: 1,
+                        xp: 0,
+                        max_xp: 100,
+                        // Reset Base Stats
+                        ...baseStats,
+                        // Reset Skills (Gathering)
+                        skills: {
+                            woodcutting: { level: 1, xp: 0, max_xp: 100 },
+                            mining: { level: 1, xp: 0, max_xp: 100 },
+                            research: { level: 1, xp: 0, max_xp: 100 }
+                        },
+                        // Reset Combat Skills
+                        unlockedSkills: [],
+                        skillPoints: 0,
+                        // Reset Resources
+                        resources: { wood: 0, stone: 0, tech: 0 },
+                        // Reset Buildings
+                        buildings: { townHall: 1, lumberMill: 0, mine: 0, blacksmith: 0, library: 0 },
+                        // Reset Workers
+                        workers: { woodsman: 0, miner: 0, researcher: 0 },
+                        maxPopulation: 5,
+                        // Reset Max Queue
+                        maxQueueSlots: state.character.isPrime ? 100 : 3, // Reset to base, but respect Prime
+
+                        // Gain Prestige
+                        rebirthCount: (state.character.rebirthCount || 0) + 1,
+                        ancientShards: (state.character.ancientShards || 0) + shardsEarned,
+                        // Keep: Gold (maybe hard mode resets this too?), Inventory, Equipment, Guild, Honor, Diamonds, Prime, Pets
+                        pets: state.character.pets || [],
+                        equippedPet: state.character.equippedPet,
+                    } : null
+                }))
+
+                get().addLog(`REBIRTH SUCCESSFUL! You have ascended from level ${oldLevel} and gained ${shardsEarned} Ancient Shards.`, 'success')
+                get().saveToCloud()
+            },
+
+            buyTempleUpgrade: (type) => {
+                const { character } = get()
+                if (!character) return
+
+                const upgrades = character.templeUpgrades || { xpBoost: 0, resourceCap: 0, autoSpeed: 0 }
+                let cost = 0
+                let currentLevel = 0
+
+                if (type === 'xpBoost') {
+                    currentLevel = upgrades.xpBoost
+                    cost = 10 * Math.pow(1.5, currentLevel)
+                } else if (type === 'resourceCap') {
+                    currentLevel = upgrades.resourceCap
+                    cost = 20 * Math.pow(1.5, currentLevel)
+                } else if (type === 'autoSpeed') {
+                    currentLevel = upgrades.autoSpeed
+                    cost = 50 * Math.pow(2, currentLevel)
+                }
+
+                cost = Math.floor(cost)
+
+                if (character.ancientShards < cost) {
+                    get().addLog(`Not enough Ancient Shards! Need ${cost}`, 'error')
+                    return
+                }
+
+                set((state) => ({
+                    character: state.character ? {
+                        ...state.character,
+                        ancientShards: state.character.ancientShards - cost,
+                        templeUpgrades: {
+                            ...upgrades,
+                            [type]: currentLevel + 1
+                        }
+                    } : null
+                }))
+
+                get().addLog(`Upgraded ${type} to level ${currentLevel + 1}!`, 'success')
+                get().saveToCloud()
+            },
+
+            addDiamonds: (amount) => {
+                set((state) => ({
+                    character: state.character ? {
+                        ...state.character,
+                        diamonds: (state.character.diamonds || 0) + amount
+                    } : null
+                }))
+                get().saveToCloud()
+            },
+
+            spendDiamonds: (amount) => {
+                const { character } = get()
+                if (!character || (character.diamonds || 0) < amount) {
+                    get().addLog("Not enough Diamonds!", "error")
+                    return false
+                }
+                set((state) => ({
+                    character: state.character ? {
+                        ...state.character,
+                        diamonds: (state.character.diamonds || 0) - amount
+                    } : null
+                }))
+                get().saveToCloud()
+                return true
+            },
+
+            setPrimeStatus: (isPrime, expiresAt) => {
+                set((state) => ({
+                    character: state.character ? {
+                        ...state.character,
+                        isPrime,
+                        primeExpiresAt: expiresAt
+                    } : null
+                }))
+                if (isPrime) {
+                    get().addLog("Welcome to Nexus Prime! Enjoy your benefits.", "success")
+                }
+                get().saveToCloud()
             },
 
             saveToCloud: async () => {
@@ -1216,7 +1724,8 @@ export const useGameStore = create<GameState>()(
                 if (!userResult) return
 
                 const state = get()
-                if (!state.character) return
+                const character = state.character
+                if (!character) return
 
                 const error = await safeSupabaseCall(
                     async (client) => {
@@ -1224,9 +1733,12 @@ export const useGameStore = create<GameState>()(
                             .from('profiles')
                             .upsert({
                                 id: userResult.id,
-                                username: state.character.name,
-                                game_state: state.character as any,
-                                updated_at: new Date().toISOString()
+                                username: character.name,
+                                game_state: character as any,
+                                updated_at: new Date().toISOString(),
+                                honor_daily: character.honor?.daily || 0,
+                                honor_weekly: character.honor?.weekly || 0,
+                                honor_lifetime: character.honor?.lifetime || 0
                             })
                         return error
                     },
@@ -1238,6 +1750,58 @@ export const useGameStore = create<GameState>()(
                     get().addLog('Cloud save failed. Progress saved locally.', 'warning')
                     console.error('Save failed:', error)
                 }
+            },
+
+            hatchPet: () => {
+                const { character } = get()
+                if (!character) return
+
+                const COST = 1000
+                if (character.gold < COST) {
+                    get().addLog(`Not enough Gold! Need ${COST}`, 'error')
+                    return
+                }
+
+                // Deduct Gold
+                set(state => ({
+                    character: state.character ? { ...state.character, gold: state.character.gold - COST } : null
+                }))
+
+                // Simple Gacha Logic
+                import('../data/pets').then(({ PETS }) => {
+                    const roll = Math.random()
+                    let rarity = 'common'
+                    if (roll > 0.95) rarity = 'legendary'
+                    else if (roll > 0.85) rarity = 'epic'
+                    else if (roll > 0.65) rarity = 'rare'
+
+                    const pool = PETS.filter((p: any) => p.rarity === rarity)
+                    const pet = pool[Math.floor(Math.random() * pool.length)]
+
+                    const owned = character.pets || []
+                    if (!owned.includes(pet.id)) {
+                        set(state => ({
+                            character: state.character ? {
+                                ...state.character,
+                                pets: [...(state.character.pets || []), pet.id]
+                            } : null
+                        }))
+                        get().addLog(`You hatched a ${pet.name}!`, 'success')
+                    } else {
+                        get().addLog(`You hatched a duplicate ${pet.name}. +100 Gold refund.`, 'info')
+                        set(state => ({
+                            character: state.character ? { ...state.character, gold: state.character.gold + 100 } : null
+                        }))
+                    }
+                    get().saveToCloud()
+                })
+            },
+
+            equipPet: (petId) => {
+                set(state => ({
+                    character: state.character ? { ...state.character, equippedPet: petId } : null
+                }))
+                get().saveToCloud()
             },
 
             resetState: () => {
@@ -1258,6 +1822,24 @@ export const useGameStore = create<GameState>()(
                 set((state) => ({
                     character: state.character ? { ...state.character, stamina: state.character.max_stamina } : null
                 }))
+            },
+
+            addHonor: (amount) => {
+                set((state) => {
+                    if (!state.character) return state
+                    return {
+                        character: {
+                            ...state.character,
+                            honor: {
+                                daily: state.character.honor.daily + amount,
+                                weekly: state.character.honor.weekly + amount,
+                                lifetime: state.character.honor.lifetime + amount
+                            }
+                        }
+                    }
+                })
+                get().addLog(`Gained ${amount} Honor!`, 'success')
+                get().saveToCloud()
             }
         }),
         {
@@ -1280,6 +1862,10 @@ export const useGameStore = create<GameState>()(
                     if (typeof state.character.maxPopulation !== 'number') {
                         state.character.maxPopulation = 5
                     }
+                    // Ensure honor is initialized
+                    if (!state.character.honor) {
+                        state.character.honor = { daily: 0, weekly: 0, lifetime: 0 }
+                    }
                     // Ensure maxQueueSlots is initialized
                     if (typeof state.character.maxQueueSlots !== 'number') {
                         state.character.maxQueueSlots = 3
@@ -1291,6 +1877,62 @@ export const useGameStore = create<GameState>()(
                     if (typeof state.character.max_mana !== 'number') {
                         state.character.max_mana = 50
                     }
+                    if (typeof state.character.rebirthCount !== 'number') {
+                        state.character.rebirthCount = 0
+                    }
+                    if (typeof state.character.ancientShards !== 'number') {
+                        state.character.ancientShards = 0
+                    }
+                    // Ensure skills are initialized
+                    if (!state.character.skills) {
+                        state.character.skills = {
+                            woodcutting: { level: 1, xp: 0, max_xp: 100 },
+                            mining: { level: 1, xp: 0, max_xp: 100 },
+                            research: { level: 1, xp: 0, max_xp: 100 }
+                        }
+                    }
+                    if (typeof state.character.diamonds !== 'number') {
+                        state.character.diamonds = 0
+                    }
+                    if (typeof state.character.isPrime !== 'boolean') {
+                        state.character.isPrime = false
+                    }
+
+                    // Offline Progress Calculation
+                    const lastSaved = state.character.lastSavedAt || Date.now()
+                    const now = Date.now()
+                    const diffSeconds = Math.floor((now - lastSaved) / 1000)
+
+                    if (diffSeconds > 60) {
+                        // Cap at 24 hours (86400 seconds)
+                        const effectiveSeconds = Math.min(diffSeconds, 86400)
+
+                        // Calculate gains defined by workers
+                        // Base rates: Woodsman=1, Miner=1, Researcher=1 (per tick/sec)
+                        // TODO: Pull rates from constants if available
+                        const woodGain = state.character.workers.woodsman * 1 * effectiveSeconds
+                        const stoneGain = state.character.workers.miner * 1 * effectiveSeconds
+                        const techGain = state.character.workers.researcher * 1 * effectiveSeconds
+
+                        if (woodGain > 0 || stoneGain > 0 || techGain > 0) {
+                            state.character.resources.wood += woodGain
+                            state.character.resources.stone += stoneGain
+                            state.character.resources.tech += techGain
+
+                            // Set offline gains state to show modal
+                            // We need to extend the state here, but 'state' is the persisted PARTIAL state.
+                            // We can't set transient state (offlineGains) on the persisted state directly if it's not part of it.
+                            // But usually onRehydrate allows mutating the incoming state.
+                            // Better approach: We add 'lastOfflineGains' to the store, but don't persist it? 
+                            // actually we can just console log for now or try to set it.
+                            // state is 'Character', not GameState? Wait, persist wraps GameState.
+                            // partialize returns { character, quests }.
+                            // So 'state' here is { character, quests }.
+                            // We can't easily set 'offlineGains' here if it's not persisted.
+                            // Workaround: Add 'offlineReport' to character (persisted) then clear it after showing.
+                        }
+                    }
+                    state.character.lastSavedAt = now
                 }
             }
         }

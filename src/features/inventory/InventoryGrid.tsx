@@ -1,8 +1,9 @@
-import { useGameStore, type Item } from "@/store/gameStore"
+import { useGameStore, type Item, getItemColor } from "@/store/gameStore"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Shield, Sword, FlaskConical, Package } from "lucide-react"
 import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 export function InventoryGrid() {
     const { character, equipItem, moveItem, useItem, getDerivedStats } = useGameStore()
@@ -55,13 +56,17 @@ export function InventoryGrid() {
                                         onDragOver={handleDragOver}
                                         onDrop={(e) => handleDrop(e, index)}
                                         onDoubleClick={() => handleDoubleClick(slot.item)}
-                                        className="group relative flex aspect-square cursor-grab active:cursor-grabbing flex-col items-center justify-center rounded-md border bg-card hover:bg-accent hover:border-primary transition-colors"
+                                        className={cn(
+                                            "group relative flex aspect-square cursor-grab active:cursor-grabbing flex-col items-center justify-center rounded-md border bg-card hover:bg-accent transition-colors",
+                                            getItemColor(slot.item.rarity)
+                                        )}
                                     >
-                                        <div className="mb-2 text-primary pointer-events-none">
+                                        <div className="mb-2 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
                                             {slot.item.type === 'equipment' && slot.item.subtype === 'weapon' ? <Sword className="h-6 w-6" /> :
                                                 slot.item.type === 'equipment' ? <Shield className="h-6 w-6" /> :
                                                     slot.item.type === 'consumable' ? <FlaskConical className="h-6 w-6" /> :
-                                                        <Package className="h-6 w-6" />}
+                                                        slot.item.icon ? <span className="text-2xl">{slot.item.icon}</span> :
+                                                            <Package className="h-6 w-6" />}
                                         </div>
                                         <span className="text-[10px] font-medium truncate w-full text-center px-1 pointer-events-none">{slot.item.name}</span>
                                         {slot.count > 1 && (
