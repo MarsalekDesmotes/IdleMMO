@@ -1,7 +1,7 @@
 import {
     Sword,
     Backpack,
-    Hammer,
+    Hammer, // Keeping for fallback
     Map as MapIcon,
     Castle,
     Swords,
@@ -9,20 +9,38 @@ import {
     Users,
     ShoppingCart,
     Flame,
-    LayoutDashboard, // Kept for 'dashboard'
-    Globe,           // Kept for 'world'
-    Zap,             // Kept for 'skills'
-    Gift,            // Kept for 'rewards'
-    PawPrint,        // Kept for 'pets'
-    Skull,           // Added for 'dungeon'
-    Settings,        // Added for 'settings'
-    Scroll           // Added for 'cooking'
+    LayoutDashboard,
+    Globe,
+    Zap,
+    Gift,
+    PawPrint,
+    Skull,
+    Settings,
+    Scroll
 } from "lucide-react"
 import { useUIStore } from "@/store/uiStore"
 import { useGameStore } from "@/store/gameStore"
 import { cn } from "@/lib/utils"
 import { UserProfile } from "@/features/character/UserProfile"
 import { useAvailableRewards, useAvailableSkills } from "@/hooks/useNotifications"
+
+// Import Icons
+import strongholdIcon from "@/assets/icons/stronghold.png"
+import combatIcon from "@/assets/icons/combat.png"
+import skillsIcon from "@/assets/icons/skills.png"
+import inventoryIcon from "@/assets/icons/inventory.png"
+import craftingIcon from "@/assets/icons/crafting.png"
+import mapImgIcon from "@/assets/icons/map.png"
+import worldIcon from "@/assets/icons/world.png"
+import kingdomIcon from "@/assets/icons/kingdom.png"
+import marketIcon from "@/assets/icons/market.png"
+import petsIcon from "@/assets/icons/pets.png"
+import dungeonIcon from "@/assets/icons/dungeon.png"
+import guildIcon from "@/assets/icons/guild.png"
+import rewardsIcon from "@/assets/icons/rewards.png"
+import shopIcon from "@/assets/icons/shop.png"
+import rebirthIcon from "@/assets/icons/rebirth.png"
+import settingsIcon from "@/assets/icons/settings.png"
 
 export function Sidebar() {
     const { currentView, setView } = useUIStore()
@@ -32,27 +50,25 @@ export function Sidebar() {
     const hasAvailableSkills = useAvailableSkills()
 
     const navItems = [
-        { id: 'dashboard', label: 'Stronghold', icon: LayoutDashboard, minLevel: 1, showIdle: true },
-        { id: 'combat', label: 'Combat', icon: Sword, minLevel: 1 },
-        { id: 'skills', label: 'Skills', icon: Zap, minLevel: 2, showNotification: hasAvailableSkills },
-        { id: 'inventory', label: 'Inventory', icon: Backpack, minLevel: 1 },
-        { id: 'crafting', label: 'Crafting', icon: Hammer, minLevel: 1 },
-        { id: 'map', label: 'Map', icon: MapIcon, minLevel: 1 }, // Changed to MapIcon
-        { id: 'world', label: 'World', icon: Globe, minLevel: 1 },
-        { id: 'kingdom', label: 'Kingdom', icon: Castle, minLevel: 3 },
-        { id: 'market', label: 'Market', icon: ShoppingCart, minLevel: 5 }, // Changed to ShoppingCart
-        { id: 'pets', icon: PawPrint, label: 'Pets', minLevel: 5 },
-        { id: 'dungeon', icon: Skull, label: 'Dungeon', minLevel: 10 },
-        { id: 'enhancement', icon: Hammer, label: 'Forge', minLevel: 10 }, // Enhancement Link
-        { id: 'cooking', icon: Scroll, label: 'Cooking', minLevel: 5 }, // Changed to ShoppingCart
-        { id: 'guild', label: 'Guilds', icon: Users, minLevel: 10 },
-        { id: 'arena', label: 'Arena', icon: Swords, minLevel: 10 },
-        { id: 'rewards', label: 'Rewards', icon: Gift, minLevel: 1, showNotification: hasAvailableRewards },
-        { id: 'shop', label: 'Shop', icon: Store, minLevel: 1 },
-        { id: 'rebirth', label: 'Rebirth', icon: Flame, minLevel: 20 },
-        { id: 'pets', label: 'Companions', icon: PawPrint, minLevel: 5 },
-        { id: 'cooking', label: 'Cooking', icon: Scroll, minLevel: 5 }, // Added Cooking link
-        { id: 'settings', label: 'Settings', icon: Settings, minLevel: 1 }, // Added Settings link
+        { id: 'dashboard', label: 'Stronghold', icon: LayoutDashboard, iconSrc: strongholdIcon, minLevel: 1, showIdle: true },
+        { id: 'combat', label: 'Combat', icon: Sword, iconSrc: combatIcon, minLevel: 1 },
+        { id: 'skills', label: 'Skills', icon: Zap, iconSrc: skillsIcon, minLevel: 2, showNotification: hasAvailableSkills },
+        { id: 'inventory', label: 'Inventory', icon: Backpack, iconSrc: inventoryIcon, minLevel: 1 },
+        { id: 'crafting', label: 'Crafting', icon: Hammer, iconSrc: craftingIcon, minLevel: 1 },
+        { id: 'map', label: 'Map', icon: MapIcon, iconSrc: mapImgIcon, minLevel: 1 },
+        { id: 'world', label: 'World', icon: Globe, iconSrc: worldIcon, minLevel: 1 },
+        { id: 'kingdom', label: 'Kingdom', icon: Castle, iconSrc: kingdomIcon, minLevel: 3 },
+        { id: 'market', label: 'Market', icon: ShoppingCart, iconSrc: marketIcon, minLevel: 5 },
+        { id: 'pets', label: 'Pets', icon: PawPrint, iconSrc: petsIcon, minLevel: 5 },
+        { id: 'dungeon', label: 'Dungeon', icon: Skull, iconSrc: dungeonIcon, minLevel: 10 },
+        { id: 'enhancement', label: 'Forge', icon: Hammer, iconSrc: craftingIcon, minLevel: 10 }, // Reusing Crafting Icon
+        { id: 'cooking', label: 'Cooking', icon: Scroll, minLevel: 5 }, // No icon generated yet
+        { id: 'guild', label: 'Guilds', icon: Users, iconSrc: guildIcon, minLevel: 10 },
+        { id: 'arena', label: 'Arena', icon: Swords, iconSrc: combatIcon, minLevel: 10 }, // Reusing Combat Icon
+        { id: 'rewards', label: 'Rewards', icon: Gift, iconSrc: rewardsIcon, minLevel: 1, showNotification: hasAvailableRewards },
+        { id: 'shop', label: 'Shop', icon: Store, iconSrc: shopIcon, minLevel: 1 },
+        { id: 'rebirth', label: 'Rebirth', icon: Flame, iconSrc: rebirthIcon, minLevel: 20 },
+        { id: 'settings', label: 'Settings', icon: Settings, iconSrc: settingsIcon, minLevel: 1 },
     ]
 
     return (
@@ -87,7 +103,11 @@ export function Sidebar() {
                                 isLocked && "opacity-50 cursor-not-allowed"
                             )}
                         >
-                            <item.icon className="h-4 w-4" />
+                            {item.iconSrc ? (
+                                <img src={item.iconSrc} alt={item.label} className="h-4 w-4 object-contain" />
+                            ) : (
+                                <item.icon className="h-4 w-4" />
+                            )}
                             {item.label}
                             {showIdle && (
                                 <span className="ml-auto text-xs text-muted-foreground/70 animate-pulse">z z z</span>

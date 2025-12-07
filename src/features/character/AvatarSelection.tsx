@@ -6,8 +6,33 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sword, Scroll, Crosshair } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+// Default Avatars
 import avatarMale from "@/assets/avatar_male.jpg"
 import avatarFemale from "@/assets/avatar_female.jpg"
+
+// Class Avatars
+import paladinMale from "@/assets/avatars/paladin_male.jpg"
+import paladinFemale from "@/assets/avatars/paladin_female.png"
+import archmageMale from "@/assets/avatars/archmage_male.jpg"
+import archmageFemale from "@/assets/avatars/archmage_female.jpg"
+import rangerMale from "@/assets/avatars/ranger_male.jpg"
+import rangerFemale from "@/assets/avatars/ranger_female.jpg"
+
+const classAvatars: Record<CharacterClass, Record<Gender, string>> = {
+    Paladin: {
+        male: paladinMale,
+        female: paladinFemale
+    },
+    Archmage: {
+        male: archmageMale,
+        female: archmageFemale
+    },
+    Ranger: {
+        male: rangerMale,
+        female: rangerFemale
+    }
+}
 
 export function AvatarSelection() {
     const [name, setName] = useState("")
@@ -20,6 +45,10 @@ export function AvatarSelection() {
             createCharacter(name, selectedClass, gender)
         }
     }
+
+    const currentAvatar = selectedClass
+        ? classAvatars[selectedClass][gender]
+        : (gender === 'male' ? avatarMale : avatarFemale)
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -38,7 +67,7 @@ export function AvatarSelection() {
                         <div className="flex flex-col items-center space-y-4">
                             <div className="relative aspect-square w-64 overflow-hidden rounded-xl border-2 border-primary/50 shadow-2xl shadow-primary/20">
                                 <img
-                                    src={gender === 'male' ? avatarMale : avatarFemale}
+                                    src={currentAvatar}
                                     alt="Character Avatar"
                                     className="h-full w-full object-cover transition-all duration-500 hover:scale-105"
                                 />

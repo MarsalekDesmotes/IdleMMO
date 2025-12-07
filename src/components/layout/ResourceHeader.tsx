@@ -1,7 +1,14 @@
 import { useMemo } from "react"
 import { useGameStore } from "@/store/gameStore"
 import { useUIStore } from "@/store/uiStore"
-import { Coins, Trees, Mountain, Cpu, TrendingUp, Trophy } from "lucide-react"
+import { TrendingUp } from "lucide-react"
+
+// Import Icons
+import goldIcon from "@/assets/icons/gold.png"
+import woodIcon from "@/assets/icons/wood.png"
+import stoneIcon from "@/assets/icons/stone.png"
+import techIcon from "@/assets/icons/tech.png"
+import honorIcon from "@/assets/icons/honor.png"
 
 export function ResourceHeader() {
     const { character } = useGameStore()
@@ -48,18 +55,18 @@ export function ResourceHeader() {
                     onClick={() => setView('leaderboard')}
                     title="View Leaderboard"
                 >
-                    <Trophy className="h-4 w-4 text-purple-500" />
+                    <img src={honorIcon} alt="Honor" className="h-5 w-5 object-contain" />
                     <span className="font-bold text-purple-500">{character.honor?.lifetime || 0}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Coins className="h-4 w-4 text-yellow-500" />
+                    <img src={goldIcon} alt="Gold" className="h-5 w-5 object-contain" />
                     <span className="font-bold text-yellow-500">{character.gold}</span>
                     <span className="text-xs text-muted-foreground hidden md:inline">Gold</span>
                 </div>
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2">
-                        <Trees className="h-4 w-4 text-green-600" />
+                        <img src={woodIcon} alt="Wood" className="h-5 w-5 object-contain" />
                         <span className="font-bold text-green-600">{character.resources.wood}</span>
                         <span className="text-xs text-muted-foreground hidden md:inline">Wood</span>
                     </div>
@@ -72,7 +79,7 @@ export function ResourceHeader() {
                 </div>
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2">
-                        <Mountain className="h-4 w-4 text-stone-300" />
+                        <img src={stoneIcon} alt="Stone" className="h-5 w-5 object-contain" />
                         <span className="font-bold text-stone-300">{character.resources.stone}</span>
                         <span className="text-xs text-muted-foreground hidden md:inline">Stone</span>
                     </div>
@@ -85,7 +92,7 @@ export function ResourceHeader() {
                 </div>
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2">
-                        <Cpu className="h-4 w-4 text-blue-400" />
+                        <img src={techIcon} alt="Tech" className="h-5 w-5 object-contain" />
                         <span className="font-bold text-blue-400">{character.resources.tech}</span>
                         <span className="text-xs text-muted-foreground hidden md:inline">Tech</span>
                     </div>
