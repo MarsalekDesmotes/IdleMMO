@@ -261,6 +261,7 @@ export interface GameState {
     loadFromCloud: () => Promise<void>
     saveToCloud: () => Promise<void>
     resetState: () => void
+    hardReset: () => void
 
     // Debug Actions
     debugAddGold: (amount: number) => void
@@ -1808,10 +1809,14 @@ export const useGameStore = create<GameState>()(
                 set({ character: null, logs: [], actionQueue: [], quests: INITIAL_QUESTS })
             },
 
-            debugAddGold: (amount) => {
-                set((state) => ({
-                    character: state.character ? { ...state.character, gold: state.character.gold + amount } : null
-                }))
+            // Debug
+            debugAddGold: (amount: number) => set((state) => ({
+                character: state.character ? { ...state.character, gold: state.character.gold + amount } : null
+            })),
+            hardReset: () => {
+                localStorage.removeItem('idle-age-mmo-storage')
+                localStorage.removeItem('nexus-protocol-periodic-rewards')
+                set({ character: null, actionQueue: [], activeAction: null })
             },
 
             debugLevelUp: () => {

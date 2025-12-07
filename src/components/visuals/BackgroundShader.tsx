@@ -50,8 +50,8 @@ export function BackgroundShader() {
                 
                 float fog = mix(n1, n2, 0.5);
                 
-                // Dark color palette (Deep Blue/Black/Purple)
-                vec3 color = mix(vec3(0.05, 0.05, 0.1), vec3(0.1, 0.05, 0.15), fog);
+                // Warm Medieval Atmosphere (Dark Brown/Stone/Amber fog)
+                vec3 color = mix(vec3(0.08, 0.07, 0.06), vec3(0.16, 0.14, 0.10), fog);
                 
                 // Vignette
                 float dist = distance(st, vec2(0.5));

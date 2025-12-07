@@ -35,7 +35,7 @@ const EVENTS: Omit<GameEvent, 'startTime'>[] = [
             levelBonus: 2,
             hpMultiplier: 1.5
         },
-        xpMultiplier: 2.0
+        xpMultiplier: 3.0
     },
     {
         id: 'goblin_raid',
@@ -47,7 +47,7 @@ const EVENTS: Omit<GameEvent, 'startTime'>[] = [
             levelBonus: 0,
             hpMultiplier: 0.8
         },
-        xpMultiplier: 1.2
+        xpMultiplier: 2.0
     }
 ]
 
@@ -89,7 +89,7 @@ export const useEventStore = create<EventState>((set, get) => ({
         }
         set({
             activeEvent: null,
-            nextEventTime: Date.now() + (Math.random() * 60000) + 30000 // Next event in 30-90 seconds
+            nextEventTime: Date.now() + (Math.random() * 600000) + 300000 // Next event in 5-15 minutes (300k - 900k ms)
         })
     }
 }))

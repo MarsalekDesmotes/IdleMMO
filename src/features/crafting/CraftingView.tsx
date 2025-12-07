@@ -1,7 +1,7 @@
 import { useGameStore } from "@/store/gameStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Hammer, Lock, Shield, Sword, Mail, HardHat, Wand2, Scroll } from "lucide-react"
+import { Hammer, Shield, Sword, Mail, HardHat, Wand2, Scroll } from "lucide-react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 import { RECIPES } from "@/data/recipes"
@@ -14,7 +14,15 @@ export function CraftingView() {
     return (
         <TooltipProvider>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {RECIPES.map((recipe) => {
+                {RECIPES.filter(recipe => {
+                    // Progression Filter: Only show if the building requirement is met or close to being met?
+                    // User said: "Show newly learned recipes when building upgrades."
+                    // So we hide if building level is insufficient. 
+                    // Exception: If no building required (T0), show.
+                    if (!recipe.requiredBuilding) return true
+                    const buildingLevel = character.buildings[recipe.requiredBuilding]
+                    return buildingLevel >= (recipe.requiredBuildingLevel || 0)
+                }).map((recipe) => {
                     const buildingLevel = recipe.requiredBuilding ? character.buildings[recipe.requiredBuilding] : 0
                     const isBuildingMet = !recipe.requiredBuilding || buildingLevel >= (recipe.requiredBuildingLevel || 0)
 
@@ -48,7 +56,7 @@ export function CraftingView() {
                                                                 <Hammer className="h-4 w-4" />}
                                         {recipe.name}
                                     </span>
-                                    {!isBuildingMet && <Lock className="h-4 w-4 text-muted-foreground" />}
+                                    {/* Lock icon removed since we hide locked items mostly, but code kept logic just in case */}
                                 </CardTitle>
                                 <CardDescription className="text-xs">{recipe.description}</CardDescription>
                             </CardHeader>

@@ -10,6 +10,7 @@ interface AuthState {
     loading: boolean
     isGuest: boolean
     initialize: () => Promise<void>
+    signUp: (email: string, password: string) => Promise<{ data: any, error: any }>
     signIn: (email: string, password: string) => Promise<{ error: any }>
     linkGuestAccount: (email: string, password: string) => Promise<{ error: any }>
     loginAsGuest: () => void
@@ -49,24 +50,39 @@ export const useAuthStore = create<AuthState>()(
                     set({ loading: false })
                 }
             },
+            signUp: async (email: string, password: string) => {
+                if (!isSupabaseAvailable()) {
+                    return { data: null, error: { message: 'Supabase not configured.' } }
+                }
+                try {
+                    const { data, error } = await supabase!.auth.signUp({
+                        email,
+                        password
+                    })
+                    if (data?.session) {
+                        set({ session: data.session, user: data.user })
+                        if (data.user) useGameStore.getState().loadFromCloud()
+                    }
+                    return { data, error }
+                } catch (error) {
+                    console.error('Sign up failed:', error)
+                    return { data: null, error: { message: 'Sign up failed.' } }
+                }
+            },
             signIn: async (email: string, password: string) => {
                 if (!isSupabaseAvailable()) {
                     return { error: { message: 'Supabase not configured. Please use Guest mode.' } }
                 }
 
                 try {
-                    const { error } = await supabase!.auth.signInWithPassword({
+                    const { data, error } = await supabase!.auth.signInWithPassword({
                         email,
                         password
                     })
 
-                    if (error) {
-                        // If login fails, try sign up (auto-register)
-                        const { error: signUpError } = await supabase!.auth.signUp({
-                            email,
-                            password
-                        })
-                        return { error: signUpError }
+                    if (!error && data?.session) {
+                        set({ session: data.session, user: data.user })
+                        if (data.user) useGameStore.getState().loadFromCloud()
                     }
 
                     return { error }

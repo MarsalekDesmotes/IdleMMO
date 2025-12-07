@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageSquare, CheckCircle2, Circle } from "lucide-react"
+import { QuestDialogue } from "./QuestDialogue"
+import { useState } from "react"
 
 export function NPCView() {
     const { character, npcs, quests, acceptQuest, completeQuest } = useGameStore()
@@ -12,8 +14,30 @@ export function NPCView() {
     // Filter NPCs by current zone
     const zoneNPCs = npcs.filter(npc => npc.zone === character.currentZone)
 
+    const [selectedQuest, setSelectedQuest] = useState<{ id: string, title: string, description: string, rewards: any, npcName: string } | null>(null)
+
+    const handleAcceptClick = (quest: any, npcName: string) => {
+        setSelectedQuest({ ...quest, npcName, rewards: quest.rewards })
+    }
+
+    const handleDialogueAccept = () => {
+        if (selectedQuest) {
+            acceptQuest({ id: selectedQuest.id })
+            setSelectedQuest(null)
+        }
+    }
+
     return (
         <div className="grid gap-6 md:grid-cols-2">
+            <QuestDialogue
+                open={!!selectedQuest}
+                onOpenChange={(v) => !v && setSelectedQuest(null)}
+                quest={selectedQuest}
+                npcName={selectedQuest?.npcName || ''}
+                onAccept={handleDialogueAccept}
+                onDecline={() => setSelectedQuest(null)}
+            />
+
             {/* NPC List */}
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -70,7 +94,7 @@ export function NPCView() {
                                                 Rewards: <span className="text-yellow-500">{questDef.rewards.gold}g</span>, <span className="text-blue-400">{questDef.rewards.xp} XP</span>
                                             </div>
                                             {!isAccepted && !isCompleted && (
-                                                <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => acceptQuest({ id: npcQuest.id })}>
+                                                <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => handleAcceptClick(questDef, npc.name)}>
                                                     Accept
                                                 </Button>
                                             )}

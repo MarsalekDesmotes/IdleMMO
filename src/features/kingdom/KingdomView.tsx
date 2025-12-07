@@ -354,27 +354,34 @@ export function KingdomView() {
                     <div className="h-px flex-1 bg-border"></div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <BuildingCard
-                        type="blacksmith"
-                        name="Blacksmith"
-                        icon={Hammer}
-                        description="Forge better weapons and tools."
-                        baseCost={{ credits: 150, wood: 100, stone: 50 }}
-                        character={character}
-                        constructBuilding={constructBuilding}
-                    />
-                    <BuildingCard
-                        type="library"
-                        name="Library"
-                        icon={Book}
-                        description="Increases tech production by 25% per level. Research technologies."
-                        baseCost={{ credits: 200, wood: 150, stone: 100 }}
-                        character={character}
-                        constructBuilding={constructBuilding}
-                        autoUnlockLevel={10}
-                        isAutoEnabled={character.autoGathering?.tech}
-                        toggleAutoGather={() => toggleAuto('tech')}
-                    />
+                    {/* Blacksmith: Requires Town Hall Lv 2 */}
+                    {(character.buildings.townHall >= 2 || character.buildings.blacksmith > 0) && (
+                        <BuildingCard
+                            type="blacksmith"
+                            name="Blacksmith"
+                            icon={Hammer}
+                            description="Forge better weapons and tools."
+                            baseCost={{ credits: 150, wood: 100, stone: 50 }}
+                            character={character}
+                            constructBuilding={constructBuilding}
+                        />
+                    )}
+
+                    {/* Library: Requires Town Hall Lv 3 */}
+                    {(character.buildings.townHall >= 3 || character.buildings.library > 0) && (
+                        <BuildingCard
+                            type="library"
+                            name="Library"
+                            icon={Book}
+                            description="Increases tech production by 25% per level. Research technologies."
+                            baseCost={{ credits: 200, wood: 150, stone: 100 }}
+                            character={character}
+                            constructBuilding={constructBuilding}
+                            autoUnlockLevel={10}
+                            isAutoEnabled={character.autoGathering?.tech}
+                            toggleAutoGather={() => toggleAuto('tech')}
+                        />
+                    )}
                 </div>
             </div>
         </div>

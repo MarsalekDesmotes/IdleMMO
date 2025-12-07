@@ -43,8 +43,10 @@ export function LeaderboardView() {
         <Card className="h-[600px] flex flex-col w-full max-w-2xl mx-auto border-2 border-primary/20 bg-background/95 backdrop-blur shadow-2xl">
             <CardHeader className="border-b border-border/50 pb-4">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-3 text-2xl text-primary">
-                        <Trophy className="h-6 w-6 text-yellow-500" />
+                    <CardTitle className="flex items-center gap-3 text-2xl text-[#d4af37] font-medieval">
+                        <div className="p-2 border border-[#d4af37]/50 rounded-full bg-[#1a1816]">
+                            <Trophy className="h-6 w-6 text-yellow-500" />
+                        </div>
                         Hall of Honor
                     </CardTitle>
                     <div className="flex bg-muted/50 p-1 rounded-lg">

@@ -1,22 +1,23 @@
 import {
-    Sword,
-    Backpack,
-    Hammer, // Keeping for fallback
-    Map as MapIcon,
-    Castle,
-    Swords,
-    Store,
-    Users,
-    ShoppingCart,
-    Flame,
     LayoutDashboard,
-    Globe,
+    Sword,
     Zap,
-    Gift,
+    Backpack,
+    Hammer,
+    Map as MapIcon,
+    Globe,
+    Castle,
+    ShoppingCart,
     PawPrint,
     Skull,
+    Users,
+    Swords,
+    Gift,
+    Store,
+    Flame,
     Settings,
-    Scroll
+    Scroll,
+    Trophy
 } from "lucide-react"
 import { useUIStore } from "@/store/uiStore"
 import { useGameStore } from "@/store/gameStore"
@@ -65,6 +66,7 @@ export function Sidebar() {
         { id: 'cooking', label: 'Cooking', icon: Scroll, minLevel: 5 }, // No icon generated yet
         { id: 'guild', label: 'Guilds', icon: Users, iconSrc: guildIcon, minLevel: 10 },
         { id: 'arena', label: 'Arena', icon: Swords, iconSrc: combatIcon, minLevel: 10 }, // Reusing Combat Icon
+        { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, minLevel: 1 }, // Moved to bottom
         { id: 'rewards', label: 'Rewards', icon: Gift, iconSrc: rewardsIcon, minLevel: 1, showNotification: hasAvailableRewards },
         { id: 'shop', label: 'Shop', icon: Store, iconSrc: shopIcon, minLevel: 1 },
         { id: 'rebirth', label: 'Rebirth', icon: Flame, iconSrc: rebirthIcon, minLevel: 20 },
@@ -72,15 +74,15 @@ export function Sidebar() {
     ]
 
     return (
-        <aside className="w-64 border-r bg-card/30 flex flex-col hidden md:flex z-10">
-            <div className="p-6 border-b border-border/50">
-                <h1 className="text-2xl font-bold tracking-tighter text-primary">IdleAgeMMO</h1>
-                <p className="text-xs text-muted-foreground">Protocol v0.2.0</p>
+        <aside className="w-64 border-r border-border bg-card flex flex-col hidden md:flex z-10 shadow-xl">
+            <div className="p-6 border-b border-border">
+                <h1 className="text-2xl font-bold tracking-tighter text-primary font-medieval drop-shadow-md">IdleAgeMMO</h1>
+                <p className="text-xs text-muted-foreground font-body">Protocol v0.2.0</p>
             </div>
 
             <UserProfile />
             {character?.isPrime && (
-                <div className="mx-6 mb-2 px-2 py-1 bg-blue-900/30 border border-blue-500/30 rounded text-center text-xs font-bold text-blue-400">
+                <div className="mx-6 mb-2 px-2 py-1 bg-blue-900/30 border border-blue-500/30 rounded text-center text-xs font-bold text-blue-400 font-medieval">
                     NEXUS PRIME ACTIVE
                 </div>
             )}
@@ -93,13 +95,20 @@ export function Sidebar() {
                     return (
                         <button
                             key={item.id}
-                            onClick={() => !isLocked && setView(item.id as any)}
+                            onClick={() => {
+                                if (!isLocked) {
+                                    import("@/lib/audio/SoundManager").then(({ SoundManager }) => {
+                                        SoundManager.getInstance().playClick();
+                                    });
+                                    setView(item.id as any);
+                                }
+                            }}
                             disabled={isLocked}
                             className={cn(
-                                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors relative",
+                                "flex w-full items-center gap-3 rounded-sm px-3 py-2 text-sm font-bold transition-all relative font-medieval tracking-wide",
                                 currentView === item.id
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                                    ? "bg-primary/20 text-primary border border-primary/40 shadow-[inset_0_0_10px_rgba(212,175,55,0.1)]"
+                                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:translate-x-1",
                                 isLocked && "opacity-50 cursor-not-allowed"
                             )}
                         >

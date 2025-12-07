@@ -58,7 +58,10 @@ export function PeriodicRewards() {
 
         const interval = setInterval(() => {
             setCurrentTime(Date.now())
-            setRewardStates(getStoredRewardState())
+            const stored = getStoredRewardState()
+            setRewardStates(stored)
+            // Debugging: Log every 10s if state is weird
+            // if (Math.random() > 0.95) console.log('Checking rewards...', stored)
         }, 1000)
 
         return () => clearInterval(interval)
@@ -67,10 +70,15 @@ export function PeriodicRewards() {
     const handleClaim = (config: RewardConfig) => {
         if (!character) return
 
-        const state = rewardStates[config.id]
-        const now = currentTime
+        // Always fetch fresh state
+        const freshState = getStoredRewardState()
+        const state = freshState[config.id]
+        const now = Date.now() // Use immediate current time
 
-        if (now < state.nextRewardTime) return
+        if (now < state.nextRewardTime) {
+            console.log("Too early!", now, state.nextRewardTime)
+            return
+        }
 
         const xpReward = character.level * config.xpMultiplier
         const goldReward = character.level * config.goldMultiplier
@@ -86,38 +94,41 @@ export function PeriodicRewards() {
                 nextRewardTime: currentTime + config.interval
             }
         }
-        saveRewardState(newState)
-        setRewardStates(newState)
-        setOpenDialog(null)
     }
+    saveRewardState(newState)
+    setRewardStates(newState)
+    setOpenDialog(null)
+    // Force refresh UI
+    setCurrentTime(Date.now())
+}
 
-    const formatTime = (ms: number) => {
-        const totalSeconds = Math.floor(ms / 1000)
-        const hours = Math.floor(totalSeconds / 3600)
-        const minutes = Math.floor((totalSeconds % 3600) / 60)
-        const seconds = totalSeconds % 60
+const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
 
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`
-        } else if (minutes > 0) {
-            return `${minutes}m ${seconds}s`
-        } else {
-            return `${seconds}s`
-        }
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`
+    } else if (minutes > 0) {
+        return `${minutes}m ${seconds}s`
+    } else {
+        return `${seconds}s`
     }
+}
 
-    if (!character) return null
+if (!character) return null
 
-    return (
-        <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                        <Gift className="h-5 w-5 text-yellow-500" />
-                        Periodic Rewards
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+return (
+    <div className="space-y-6">
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                    <Gift className="h-5 w-5 text-yellow-500" />
+                    Periodic Rewards
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
                 {REWARD_CONFIGS.map((config) => {
                     const state = rewardStates[config.id] || { lastClaimTime: 0, nextRewardTime: currentTime + config.interval }
                     const canClaim = currentTime >= state.nextRewardTime
@@ -189,9 +200,9 @@ export function PeriodicRewards() {
                         </Dialog>
                     )
                 })}
-                </CardContent>
-            </Card>
-        </div>
-    )
+            </CardContent>
+        </Card>
+    </div>
+)
 }
 

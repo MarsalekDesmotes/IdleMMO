@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { X, Clock } from "lucide-react"
 import { ShaderBackground } from "@/components/ui/shader-background"
+import { JobSimulation } from "@/components/game/simulations/JobSimulation"
 
 export function ActiveAction() {
     const { actionQueue, completeAction, cancelAction, character } = useGameStore()
@@ -69,6 +70,8 @@ export function ActiveAction() {
                         </Button>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                        <JobSimulation jobType={activeItem.action.name} isActive={true} />
+
                         <div className="flex justify-between text-xs font-semibold">
                             <span className="text-primary font-mono">{progress.toFixed(1)}%</span>
                             <span className="text-muted-foreground font-mono">{timeLeft.toFixed(1)}s remaining</span>
