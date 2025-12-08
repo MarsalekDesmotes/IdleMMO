@@ -12,7 +12,7 @@ export interface Item {
     id: string
     name: string
     type: 'resource' | 'currency' | 'equipment' | 'consumable' | 'material'
-    subtype?: 'head' | 'body' | 'hands' | 'weapon'
+    subtype?: 'head' | 'body' | 'hands' | 'weapon' | 'food'
     value: number
     description?: string
     icon?: string
@@ -127,6 +127,7 @@ export interface Character {
     currentZone: ZoneId
     maxQueueSlots: number
     inventory: { item: Item; count: number }[]
+    unlockedItems: string[]
     equipment: Equipment
     unlockedSkills: string[]
     skillPoints: number
@@ -153,6 +154,7 @@ export interface Character {
     lastSavedAt?: number
     rebirthCount: number
     ancientShards: number
+    lastCloudSync?: string // Added for cloud sync tracking
     templeUpgrades?: {
         xpBoost: number // +X% XP
         resourceCap: number // +X Cap
@@ -168,6 +170,25 @@ export interface Character {
     }
     pets: string[] // List of unlocked pet IDs
     equippedPet: string | null
+    activeEffects: ActiveEffect[]
+}
+
+export interface ActiveEffect {
+    id: string
+    name: string
+    icon: string
+    stats: {
+        attack?: number
+        defense?: number
+        str?: number
+        int?: number
+        agi?: number
+        hpRegen?: number
+        speed?: number
+        resourceMult?: number // For resource potions
+    }
+    duration: number // Seconds remaining
+    expiresAt: number // Timestamp
 }
 
 export const XP_TABLE = [0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200] // Simple curve for now
@@ -238,6 +259,7 @@ export interface GameState {
     addGold: (amount: number) => void
     levelUp: () => void
     unlockSkill: (skillId: string) => void
+    discoverItem: (itemId: string) => void
 
     // Kingdom & Map
     constructBuilding: (type: keyof Buildings, cost?: { credits: number, wood: number, stone: number }) => void
@@ -250,6 +272,7 @@ export interface GameState {
     // Stats
     regenerateStamina: (amount: number) => void
     regenerateHp: (amount: number) => void
+    tickBuffs: () => void
     getDerivedStats: () => { strength: number; intelligence: number; agility: number; defense: number; attack: number; hpRegen: number; critChance: number }
 
     // Quests & NPCs
@@ -513,6 +536,7 @@ export const useGameStore = create<GameState>()(
                         currentZone: 'outskirts',
                         maxQueueSlots: 3, // Base slots
                         inventory: [],
+                        unlockedItems: [], // Collection Log
                         equipment: { head: null, body: null, hands: null, weapon: null },
                         unlockedSkills: [],
                         skillPoints: 0,
@@ -533,7 +557,8 @@ export const useGameStore = create<GameState>()(
                         isPrime: false,
                         primeExpiresAt: null,
                         pets: [],
-                        equippedPet: null
+                        equippedPet: null,
+                        activeEffects: []
                     },
                     logs: [{ id: crypto.randomUUID(), message: `Character ${name} created.`, type: 'success', timestamp: Date.now() }]
                 })
@@ -800,6 +825,7 @@ export const useGameStore = create<GameState>()(
             },
 
             addItem: (item, count = 1) => {
+                get().discoverItem(item.id)
                 set((state) => {
                     if (!state.character) return state
                     const existingItemIndex = state.character.inventory.findIndex(i => i.item.id === item.id)
@@ -836,14 +862,16 @@ export const useGameStore = create<GameState>()(
 
             equipItem: (item) => {
                 const { character } = get()
-                if (!character || !item.subtype) return
+                if (!character || item.type !== 'equipment' || !item.subtype) return
 
                 if (item.classRestriction && !item.classRestriction.includes(character.class)) {
                     get().addLog(`You cannot equip this item. Required class: ${item.classRestriction.join(', ')}`, 'error')
                     return
                 }
 
-                const currentEquipped = character.equipment[item.subtype]
+                // effective narrowing requires casting here since Item is not a strict discriminated union
+                const subtype = item.subtype as 'head' | 'body' | 'hands' | 'weapon'
+                const currentEquipped = character.equipment[subtype]
                 if (currentEquipped) {
                     get().addItem(currentEquipped)
                 }
@@ -892,17 +920,40 @@ export const useGameStore = create<GameState>()(
             useItem: (item) => {
                 if (item.type !== 'consumable') return
 
+                const { character } = get()
+                if (!character) return
+
+                get().removeItem(item.id, 1) // Consume first
+
+                // Handle Instant Effects
                 if (item.id === 'potion_health') {
                     get().regenerateHp(50)
-                    get().removeItem(item.id, 1)
                     get().addLog("Used Health Potion. +50 HP", 'success')
-                } else if (item.stats?.hpRegen) {
-                    // Food
+                } else if (item.stats?.hpRegen && !item.stats.duration) {
+                    // Instant Food (Legacy)
                     get().regenerateHp(item.stats.hpRegen)
-                    get().removeItem(item.id, 1)
                     get().addLog(`Ate ${item.name}. +${item.stats.hpRegen} HP`, 'success')
-                } else {
-                    get().addLog(`Cannot use ${item.name}`, 'warning')
+                }
+
+                // Handle Buffs (New)
+                if (item.stats && item.stats.duration) {
+                    const now = Date.now() / 1000
+                    const effect: ActiveEffect = {
+                        id: crypto.randomUUID(),
+                        name: item.name,
+                        icon: item.icon || '🧪',
+                        stats: item.stats,
+                        duration: item.stats.duration,
+                        expiresAt: now + item.stats.duration
+                    }
+
+                    set((state) => ({
+                        character: state.character ? {
+                            ...state.character,
+                            activeEffects: [...state.character.activeEffects, effect]
+                        } : null
+                    }))
+                    get().addLog(`Used ${item.name}. Buff applied!`, 'success')
                 }
             },
 
@@ -1010,55 +1061,66 @@ export const useGameStore = create<GameState>()(
                     }
                 }
 
-                // Consume gold
-                if (recipe.goldCost) {
-                    set((state) => ({
-                        character: state.character ? {
-                            ...state.character,
-                            gold: state.character.gold - recipe.goldCost!
-                        } : null
-                    }))
-                }
+                // Perform Atomic Update
+                set(state => {
+                    if (!state.character) return state
 
-                // Consume ingredients
-                recipe.ingredients.forEach(ing => {
-                    if (ing.itemId === 'wood') {
-                        set((state) => ({
-                            character: state.character ? {
-                                ...state.character,
-                                resources: {
-                                    ...state.character.resources,
-                                    wood: state.character.resources.wood - ing.amount
+                    let newGold = state.character.gold
+                    // Consume gold
+                    if (recipe.goldCost) {
+                        newGold -= recipe.goldCost
+                    }
+
+                    // Consume ingredients
+                    let newWood = state.character.resources.wood
+                    let newStone = state.character.resources.stone
+                    let newTech = state.character.resources.tech
+                    const newInventory = [...state.character.inventory]
+
+                    recipe.ingredients.forEach(ing => {
+                        if (ing.itemId === 'wood') {
+                            newWood -= ing.amount
+                        } else if (ing.itemId === 'stone') {
+                            newStone -= ing.amount
+                        } else if (ing.itemId === 'tech') {
+                            newTech -= ing.amount
+                        } else {
+                            // Inventory Item Removal
+                            const idx = newInventory.findIndex(i => i.item.id === ing.itemId)
+                            if (idx >= 0) {
+                                if (newInventory[idx].count > ing.amount) {
+                                    newInventory[idx] = { ...newInventory[idx], count: newInventory[idx].count - ing.amount }
+                                } else {
+                                    newInventory.splice(idx, 1)
                                 }
-                            } : null
-                        }))
-                    } else if (ing.itemId === 'stone') {
-                        set((state) => ({
-                            character: state.character ? {
-                                ...state.character,
-                                resources: {
-                                    ...state.character.resources,
-                                    stone: state.character.resources.stone - ing.amount
-                                }
-                            } : null
-                        }))
-                    } else if (ing.itemId === 'tech') {
-                        set((state) => ({
-                            character: state.character ? {
-                                ...state.character,
-                                resources: {
-                                    ...state.character.resources,
-                                    tech: state.character.resources.tech - ing.amount
-                                }
-                            } : null
-                        }))
+                            }
+                        }
+                    })
+
+                    // Add Result Item
+                    const resultIdx = newInventory.findIndex(i => i.item.id === recipe.result.id)
+                    if (resultIdx >= 0) {
+                        newInventory[resultIdx] = { ...newInventory[resultIdx], count: newInventory[resultIdx].count + 1 }
                     } else {
-                        get().removeItem(ing.itemId, ing.amount)
+                        newInventory.push({ item: recipe.result, count: 1 })
+                    }
+
+                    return {
+                        character: {
+                            ...state.character,
+                            gold: newGold,
+                            resources: {
+                                wood: newWood,
+                                stone: newStone,
+                                tech: newTech
+                            },
+                            inventory: newInventory
+                        }
                     }
                 })
 
-                // Add result
-                get().addItem(recipe.result)
+                // Post-Update Actions
+                get().discoverItem(recipe.result.id)
                 get().addXp(recipe.xpReward)
                 get().addLog(`Crafted ${recipe.result.name}`, 'success')
                 get().updateQuestProgress('item', recipe.result.id, 1)
@@ -1148,8 +1210,26 @@ export const useGameStore = create<GameState>()(
                         unlockedSkills: [...state.character.unlockedSkills, skillId]
                     } : null
                 }))
-                get().addLog(`Unlocked skill: ${skill.name}`, 'success')
                 get().saveToCloud()
+            },
+
+            discoverItem: (itemId) => {
+                set((state) => {
+                    if (!state.character) return {}
+                    if (state.character.unlockedItems.includes(itemId)) return {}
+
+                    // Notify new discovery
+                    import('@/components/game/feedback/FloatingTextManager').then(({ useFloatingTextStore }) => {
+                        useFloatingTextStore.getState().addText(`Discovered: ${itemId}`, 0, 0, '#FFD700')
+                    })
+
+                    return {
+                        character: {
+                            ...state.character,
+                            unlockedItems: [...state.character.unlockedItems, itemId]
+                        }
+                    }
+                })
             },
 
             constructBuilding: (type, cost) => {
@@ -1177,6 +1257,8 @@ export const useGameStore = create<GameState>()(
                             ...state.character.buildings,
                             [type]: newLevel
                         },
+
+
                         // Update max population when Town Hall is upgraded
                         maxPopulation: type === 'townHall'
                             ? 5 + (newLevel - 1) * 3  // 5 base + 3 per level
@@ -1189,6 +1271,27 @@ export const useGameStore = create<GameState>()(
                     get().addLog(`Upgraded ${type} to level ${newLevel}`, 'success')
                 }
                 get().saveToCloud()
+            },
+
+            tickBuffs: () => {
+                set((state) => {
+                    if (!state.character?.activeEffects.length) return state
+
+                    const now = Date.now() / 1000
+                    const newEffects = state.character.activeEffects
+                        .map(e => ({ ...e, duration: Math.max(0, e.expiresAt - now) }))
+                        .filter(e => e.duration > 0)
+
+                    if (newEffects.length !== state.character.activeEffects.length) {
+                        return {
+                            character: {
+                                ...state.character,
+                                activeEffects: newEffects
+                            }
+                        }
+                    }
+                    return state
+                })
             },
 
             travelToZone: (zoneId) => {
@@ -1268,6 +1371,18 @@ export const useGameStore = create<GameState>()(
                     }
                 })
 
+                if (character.activeEffects) {
+                    character.activeEffects.forEach(effect => {
+                        if (effect.stats.attack) stats.attack += effect.stats.attack
+                        if (effect.stats.defense) stats.defense += effect.stats.defense
+                        if (effect.stats.str) stats.strength += effect.stats.str
+                        if (effect.stats.int) stats.intelligence += effect.stats.int
+                        if (effect.stats.agi) stats.agility += effect.stats.agi
+                        if (effect.stats.hpRegen) stats.hpRegen += effect.stats.hpRegen
+                        if (effect.stats.speed) stats.agility += effect.stats.speed
+                    })
+                }
+
                 return stats
             },
 
@@ -1346,7 +1461,7 @@ export const useGameStore = create<GameState>()(
                     async (client) => {
                         const { data } = await client
                             .from('profiles')
-                            .select('game_state')
+                            .select('game_state, updated_at')
                             .eq('id', userResult.id)
                             .single()
                         return data
@@ -1357,6 +1472,10 @@ export const useGameStore = create<GameState>()(
 
                 if (data && data.game_state) {
                     const loadedCharacter = data.game_state as Character
+
+                    // Sync metadata
+                    loadedCharacter.lastCloudSync = data.updated_at
+
                     // Ensure equipment is initialized
                     if (!loadedCharacter.equipment) {
                         loadedCharacter.equipment = { head: null, body: null, hands: null, weapon: null }
@@ -1514,6 +1633,7 @@ export const useGameStore = create<GameState>()(
                     set((state) => ({
                         character: state.character ? {
                             ...state.character,
+                            lastSavedAt: Date.now(),
                             resources: {
                                 wood: state.character.resources.wood + woodProduced,
                                 stone: state.character.resources.stone + stoneProduced,
@@ -1710,6 +1830,9 @@ export const useGameStore = create<GameState>()(
 
             saveToCloud: async () => {
                 if (!isSupabaseAvailable()) {
+                    set(state => ({
+                        character: state.character ? { ...state.character, lastSavedAt: Date.now() } : null
+                    }))
                     return
                 }
 
@@ -1728,6 +1851,36 @@ export const useGameStore = create<GameState>()(
                 const character = state.character
                 if (!character) return
 
+                const updateTime = new Date().toISOString()
+
+                // Check for Conflict
+                if (character.lastCloudSync) {
+                    const remoteData = await safeSupabaseCall(
+                        async (client) => {
+                            const { data } = await client
+                                .from('profiles')
+                                .select('updated_at')
+                                .eq('id', userResult.id)
+                                .single()
+                            return data
+                        },
+                        null,
+                        // No error log needed if just checking
+                    )
+
+                    if (remoteData && remoteData.updated_at) {
+                        const remoteTime = new Date(remoteData.updated_at).getTime()
+                        const localTime = new Date(character.lastCloudSync).getTime()
+
+                        // If remote is significantly newer (> 2 seconds variance to be safe)
+                        if (remoteTime > localTime + 2000) {
+                            get().addLog('Cloud Save Conflict: Remote data is newer. Please reload to sync.', 'error')
+                            console.warn(`Cloud Conflict. Remote: ${remoteData.updated_at}, Local Base: ${character.lastCloudSync}`)
+                            return
+                        }
+                    }
+                }
+
                 const error = await safeSupabaseCall(
                     async (client) => {
                         const { error } = await client
@@ -1735,8 +1888,8 @@ export const useGameStore = create<GameState>()(
                             .upsert({
                                 id: userResult.id,
                                 username: character.name,
-                                game_state: character as any,
-                                updated_at: new Date().toISOString(),
+                                game_state: { ...character, lastCloudSync: updateTime, lastSavedAt: Date.now() }, // Save the new sync time in the blob too
+                                updated_at: updateTime,
                                 honor_daily: character.honor?.daily || 0,
                                 honor_weekly: character.honor?.weekly || 0,
                                 honor_lifetime: character.honor?.lifetime || 0
@@ -1750,6 +1903,11 @@ export const useGameStore = create<GameState>()(
                 if (error) {
                     get().addLog('Cloud save failed. Progress saved locally.', 'warning')
                     console.error('Save failed:', error)
+                } else {
+                    // Update local lastCloudSync on success
+                    set(state => ({
+                        character: state.character ? { ...state.character, lastCloudSync: updateTime, lastSavedAt: Date.now() } : null
+                    }))
                 }
             },
 

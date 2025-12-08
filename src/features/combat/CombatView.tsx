@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useGameStore } from "@/store/gameStore"
 import { useCombatStore } from "@/store/combatStore"
 import { Button } from "@/components/ui/button"
@@ -7,11 +8,23 @@ import { Sword } from "lucide-react"
 import { SKILLS } from "@/data/skills"
 import { ENEMIES, type Enemy } from "@/data/enemies"
 
+
+
 export function CombatView() {
     const { character } = useGameStore()
-    const { phase, turn, enemy, playerHp, playerMaxHp, combatLog, startCombat, playerAction, endCombat } = useCombatStore()
+    const { phase, turn, enemy, playerHp, playerMaxHp, combatLog, startCombat, playerAction, endCombat, enemyTurn } = useCombatStore()
 
     if (!character) return null
+
+    // Game Loop: Handle Enemy Turn
+    useEffect(() => {
+        if (phase === 'active' && turn === 'enemy') {
+            const timer = setTimeout(() => {
+                enemyTurn()
+            }, 1000)
+            return () => clearTimeout(timer)
+        }
+    }, [phase, turn, enemyTurn])
 
     const availableSkills = character ? SKILLS[character.class].filter(s => s.type === 'active' && character.unlockedSkills.includes(s.id)) : []
 

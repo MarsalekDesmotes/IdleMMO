@@ -17,7 +17,8 @@ import {
     Flame,
     Settings,
     Scroll,
-    Trophy
+    Trophy,
+    Book
 } from "lucide-react"
 import { useUIStore } from "@/store/uiStore"
 import { useGameStore } from "@/store/gameStore"
@@ -55,6 +56,7 @@ export function Sidebar() {
         { id: 'combat', label: 'Combat', icon: Sword, iconSrc: combatIcon, minLevel: 1 },
         { id: 'skills', label: 'Skills', icon: Zap, iconSrc: skillsIcon, minLevel: 2, showNotification: hasAvailableSkills },
         { id: 'inventory', label: 'Inventory', icon: Backpack, iconSrc: inventoryIcon, minLevel: 1 },
+        { id: 'collection', label: 'Compendium', icon: Book, minLevel: 1 },
         { id: 'crafting', label: 'Crafting', icon: Hammer, iconSrc: craftingIcon, minLevel: 1 },
         { id: 'map', label: 'Map', icon: MapIcon, iconSrc: mapImgIcon, minLevel: 1 },
         { id: 'world', label: 'World', icon: Globe, iconSrc: worldIcon, minLevel: 1 },
@@ -89,7 +91,13 @@ export function Sidebar() {
 
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                 {navItems.map((item) => {
-                    const isLocked = (character?.level || 1) < item.minLevel
+                    let isLocked = (character?.level || 1) < item.minLevel
+
+                    // Special Unlock Conditions
+                    if (item.id === 'kingdom' && (character?.buildings?.townHall || 0) >= 1) {
+                        isLocked = false
+                    }
+
                     const showIdle = item.showIdle && !hasActiveJobs && !isLocked
                     const showNotification = item.showNotification && !isLocked
                     return (

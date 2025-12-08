@@ -118,30 +118,36 @@ export const useMarketStore = create<MarketState>((set, get) => ({
             return
         }
 
-        await safeSupabaseCall(
-            async (client) => {
-                const { data: { user } } = await client.auth.getUser()
-                if (!user) throw new Error('Not authenticated')
+        try {
+            await safeSupabaseCall(
+                async (client) => {
+                    const { data: { user } } = await client.auth.getUser()
+                    if (!user) throw new Error('Not authenticated')
 
-                const { error } = await client
-                    .from('market_listings')
-                    .insert({
-                        seller_id: user.id,
-                        seller_name: character.name,
-                        item_id: item.id,
-                        item_data: item,
-                        price
-                    })
+                    const { error } = await client
+                        .from('market_listings')
+                        .insert({
+                            seller_id: user.id,
+                            seller_name: character.name,
+                            item_id: item.id,
+                            item_data: item,
+                            price
+                        })
 
-                if (error) throw error
-                return null
-            },
-            null,
-            'Failed to create listing'
-        )
-
-        addLog(`Listed ${item.name} for ${price} gold`, 'success')
-        get().fetchListings()
+                    if (error) throw error
+                    return null
+                },
+                null,
+                'Failed to create listing'
+            )
+            addLog(`Listed ${item.name} for ${price} gold`, 'success')
+            get().fetchListings()
+        } catch (err) {
+            // Refund item on failure
+            useGameStore.getState().addItem(item, 1)
+            addLog('Listing failed - Item returned to inventory', 'error')
+            console.error(err)
+        }
     },
 
     buyItem: async (listing) => {

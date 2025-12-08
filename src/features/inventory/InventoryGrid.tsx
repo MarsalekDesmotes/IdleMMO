@@ -74,7 +74,7 @@ export function InventoryGrid() {
                                                 x{slot.count}
                                             </div>
                                         )}
-                                        {slot.item.subtype && character?.equipment[slot.item.subtype]?.id === slot.item.id && (
+                                        {slot.item.type === 'equipment' && slot.item.subtype && character?.equipment[slot.item.subtype as 'head' | 'body' | 'hands' | 'weapon']?.id === slot.item.id && (
                                             <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-[8px] px-1 rounded">
                                                 Equipped
                                             </div>

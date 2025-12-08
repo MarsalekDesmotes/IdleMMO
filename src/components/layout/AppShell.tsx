@@ -1,7 +1,8 @@
 import { Sidebar } from "./Sidebar"
 import { BackgroundShader } from "@/components/visuals/BackgroundShader"
-import { ChatWidget } from "@/features/social/ChatWidget"
+import { ChatView } from "@/features/chat/ChatView"
 import { GameLog } from "@/features/game/GameLog"
+import { ActiveBuffs } from "@/components/game/ActiveBuffs"
 
 interface AppShellProps {
     children: React.ReactNode
@@ -19,8 +20,9 @@ export function AppShell({ children, rightPanel }: AppShellProps) {
             {/* Right Panel (Optional) */}
             <aside className="w-80 border-l bg-card/30 hidden xl:flex flex-col z-10">
                 <div className="flex-1 p-4 overflow-hidden flex flex-col gap-4">
+                    <ActiveBuffs />
                     <GameLog />
-                    <ChatWidget />
+                    <ChatView />
                     {rightPanel}
                 </div>
             </aside>

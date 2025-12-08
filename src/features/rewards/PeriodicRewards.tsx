@@ -94,115 +94,115 @@ export function PeriodicRewards() {
                 nextRewardTime: currentTime + config.interval
             }
         }
+
+        saveRewardState(newState)
+        setRewardStates(newState)
+        setOpenDialog(null)
+        // Force refresh UI
+        setCurrentTime(Date.now())
     }
-    saveRewardState(newState)
-    setRewardStates(newState)
-    setOpenDialog(null)
-    // Force refresh UI
-    setCurrentTime(Date.now())
-}
 
-const formatTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000)
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
+    const formatTime = (ms: number) => {
+        const totalSeconds = Math.floor(ms / 1000)
+        const hours = Math.floor(totalSeconds / 3600)
+        const minutes = Math.floor((totalSeconds % 3600) / 60)
+        const seconds = totalSeconds % 60
 
-    if (hours > 0) {
-        return `${hours}h ${minutes}m`
-    } else if (minutes > 0) {
-        return `${minutes}m ${seconds}s`
-    } else {
-        return `${seconds}s`
+        if (hours > 0) {
+            return `${hours}h ${minutes}m`
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds}s`
+        } else {
+            return `${seconds}s`
+        }
     }
-}
 
-if (!character) return null
+    if (!character) return null
 
-return (
-    <div className="space-y-6">
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                    <Gift className="h-5 w-5 text-yellow-500" />
-                    Periodic Rewards
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                {REWARD_CONFIGS.map((config) => {
-                    const state = rewardStates[config.id] || { lastClaimTime: 0, nextRewardTime: currentTime + config.interval }
-                    const canClaim = currentTime >= state.nextRewardTime
-                    const timeRemaining = Math.max(0, state.nextRewardTime - currentTime)
+    return (
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <Gift className="h-5 w-5 text-yellow-500" />
+                        Periodic Rewards
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {REWARD_CONFIGS.map((config) => {
+                        const state = rewardStates[config.id] || { lastClaimTime: 0, nextRewardTime: currentTime + config.interval }
+                        const canClaim = currentTime >= state.nextRewardTime
+                        const timeRemaining = Math.max(0, state.nextRewardTime - currentTime)
 
-                    const xpReward = character.level * config.xpMultiplier
-                    const goldReward = character.level * config.goldMultiplier
+                        const xpReward = character.level * config.xpMultiplier
+                        const goldReward = character.level * config.goldMultiplier
 
-                    return (
-                        <Dialog key={config.id} open={openDialog === config.id} onOpenChange={(open) => setOpenDialog(open ? config.id : null)}>
-                            <DialogTrigger asChild>
-                                <Button
-                                    variant={canClaim ? "default" : "outline"}
-                                    className={`w-full justify-between ${canClaim ? "animate-pulse border-yellow-500" : ""}`}
-                                    disabled={!canClaim}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        {canClaim ? (
-                                            <Gift className="h-4 w-4 text-yellow-500" />
-                                        ) : (
-                                            <Clock className="h-4 w-4" />
-                                        )}
-                                        <span>{config.label}</span>
-                                    </div>
-                                    {canClaim ? (
-                                        <CheckCircle2 className="h-4 w-4" />
-                                    ) : (
-                                        <span className="text-xs">{formatTime(timeRemaining)}</span>
-                                    )}
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle className="flex items-center gap-2">
-                                        <Gift className="h-5 w-5 text-yellow-500" />
-                                        {config.label} Reward
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        Claim your periodic reward for staying active!
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                                        <span className="text-sm font-medium">Experience Points</span>
-                                        <Badge variant="outline" className="text-sm">
-                                            +{xpReward} XP
-                                        </Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                                        <span className="text-sm font-medium">Gold</span>
-                                        <Badge variant="outline" className="text-sm">
-                                            +{goldReward} Gold
-                                        </Badge>
-                                    </div>
+                        return (
+                            <Dialog key={config.id} open={openDialog === config.id} onOpenChange={(open) => setOpenDialog(open ? config.id : null)}>
+                                <DialogTrigger asChild>
                                     <Button
-                                        className="w-full"
-                                        onClick={() => handleClaim(config)}
+                                        variant={canClaim ? "default" : "outline"}
+                                        className={`w-full justify-between ${canClaim ? "animate-pulse border-yellow-500" : ""}`}
                                         disabled={!canClaim}
                                     >
-                                        Claim Reward
+                                        <div className="flex items-center gap-2">
+                                            {canClaim ? (
+                                                <Gift className="h-4 w-4 text-yellow-500" />
+                                            ) : (
+                                                <Clock className="h-4 w-4" />
+                                            )}
+                                            <span>{config.label}</span>
+                                        </div>
+                                        {canClaim ? (
+                                            <CheckCircle2 className="h-4 w-4" />
+                                        ) : (
+                                            <span className="text-xs">{formatTime(timeRemaining)}</span>
+                                        )}
                                     </Button>
-                                    {!canClaim && (
-                                        <p className="text-xs text-center text-muted-foreground">
-                                            Available in: {formatTime(timeRemaining)}
-                                        </p>
-                                    )}
-                                </div>
-                            </DialogContent>
-                        </Dialog>
-                    )
-                })}
-            </CardContent>
-        </Card>
-    </div>
-)
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2">
+                                            <Gift className="h-5 w-5 text-yellow-500" />
+                                            {config.label} Reward
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            Claim your periodic reward for staying active!
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                                            <span className="text-sm font-medium">Experience Points</span>
+                                            <Badge variant="outline" className="text-sm">
+                                                +{xpReward} XP
+                                            </Badge>
+                                        </div>
+                                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                                            <span className="text-sm font-medium">Gold</span>
+                                            <Badge variant="outline" className="text-sm">
+                                                +{goldReward} Gold
+                                            </Badge>
+                                        </div>
+                                        <Button
+                                            className="w-full"
+                                            onClick={() => handleClaim(config)}
+                                            disabled={!canClaim}
+                                        >
+                                            Claim Reward
+                                        </Button>
+                                        {!canClaim && (
+                                            <p className="text-xs text-center text-muted-foreground">
+                                                Available in: {formatTime(timeRemaining)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                        )
+                    })}
+                </CardContent>
+            </Card>
+        </div>
+    )
 }
 

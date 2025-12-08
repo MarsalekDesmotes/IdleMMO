@@ -2,8 +2,6 @@ import { useEffect } from "react"
 import { useDailyQuestStore } from "@/store/dailyQuestStore"
 import { useGameStore } from "@/store/gameStore"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
 import { Calendar, CheckCircle2, Circle, Crown } from "lucide-react"
 import { cn } from "@/lib/utils"
 

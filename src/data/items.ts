@@ -1,4 +1,5 @@
 import type { Item } from "@/store/gameStore"
+import { FOODS } from "@/data/cooking"
 
 export const ITEM_TIERS = {
     resource: [
@@ -163,6 +164,25 @@ ITEM_TIERS.equipment.forEach((tier) => {
             }
         })
     })
+})
+
+// Map Foods
+FOODS.forEach(food => {
+    ITEMS_DB[food.id] = {
+        id: food.id,
+        name: food.name,
+        type: 'consumable',
+        subtype: 'food',
+        value: 10 * food.level,
+        rarity: 'common',
+        description: `Restores ${food.heal} HP. ${food.stats ? 'Grants buffs.' : ''}`,
+        icon: food.icon,
+        stats: {
+            hpRegen: food.heal,
+            ...food.stats,
+            duration: food.duration
+        }
+    }
 })
 
 export const ITEMS = ITEMS_DB

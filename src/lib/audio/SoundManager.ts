@@ -1,8 +1,8 @@
+import { useSettingsStore } from "@/store/settingsStore"
 
 export class SoundManager {
     private static instance: SoundManager;
     private audioContext: AudioContext | null = null;
-    private isMuted: boolean = false;
 
     private constructor() {
         // Initialize AudioContext on first user interaction if needed
@@ -25,9 +25,15 @@ export class SoundManager {
         }
     }
 
+    private getSettings() {
+        const { sfxEnabled, masterVolume } = useSettingsStore.getState();
+        return { sfxEnabled, masterVolume };
+    }
+
     public playClick(pitch: number = 1.0) {
-        if (this.isMuted || !this.audioContext) return;
-        this.init(); // Ensure initialized
+        const { sfxEnabled, masterVolume } = this.getSettings();
+        if (!sfxEnabled || !this.audioContext) return;
+        this.init();
 
         const osc = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
@@ -39,7 +45,7 @@ export class SoundManager {
         osc.frequency.setValueAtTime(800 * pitch, this.audioContext.currentTime);
         osc.frequency.exponentialRampToValueAtTime(300, this.audioContext.currentTime + 0.1);
 
-        gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.1 * masterVolume, this.audioContext.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
 
         osc.start();
@@ -47,7 +53,8 @@ export class SoundManager {
     }
 
     public playSuccess() {
-        if (this.isMuted || !this.audioContext) return;
+        const { sfxEnabled, masterVolume } = this.getSettings();
+        if (!sfxEnabled || !this.audioContext) return;
         this.init();
 
         const now = this.audioContext.currentTime;
@@ -66,7 +73,7 @@ export class SoundManager {
             const time = now + (i * 0.1);
 
             gain.gain.setValueAtTime(0, time);
-            gain.gain.linearRampToValueAtTime(0.1, time + 0.05);
+            gain.gain.linearRampToValueAtTime(0.1 * masterVolume, time + 0.05);
             gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
 
             osc.start(time);
@@ -75,7 +82,8 @@ export class SoundManager {
     }
 
     public playError() {
-        if (this.isMuted || !this.audioContext) return;
+        const { sfxEnabled, masterVolume } = this.getSettings();
+        if (!sfxEnabled || !this.audioContext) return;
         this.init();
 
         const osc = this.audioContext.createOscillator();
@@ -88,7 +96,7 @@ export class SoundManager {
         osc.connect(gain);
         gain.connect(this.audioContext.destination);
 
-        gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+        gain.gain.setValueAtTime(0.1 * masterVolume, this.audioContext.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.3);
 
         osc.start();
@@ -96,7 +104,8 @@ export class SoundManager {
     }
 
     public playGold() {
-        if (this.isMuted || !this.audioContext) return;
+        const { sfxEnabled, masterVolume } = this.getSettings();
+        if (!sfxEnabled || !this.audioContext) return;
         this.init();
 
         const osc = this.audioContext.createOscillator();
@@ -109,15 +118,10 @@ export class SoundManager {
         osc.connect(gain);
         gain.connect(this.audioContext.destination);
 
-        gain.gain.setValueAtTime(0.05, this.audioContext.currentTime);
+        gain.gain.setValueAtTime(0.05 * masterVolume, this.audioContext.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.3);
 
         osc.start();
         osc.stop(this.audioContext.currentTime + 0.3);
-    }
-
-    public toggleMute() {
-        this.isMuted = !this.isMuted;
-        return this.isMuted;
     }
 }

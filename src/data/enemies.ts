@@ -37,9 +37,19 @@ export const ENEMIES: Enemy[] = [
         drops: [{ itemId: 'tech_t1', chance: 0.15 }, { itemId: 'dagger_t1', chance: 0.01 }], zone: 'outskirts'
     },
     {
-        id: 'goblin_warrior', name: 'Goblin Warrior', description: 'Armed with a rusty blade.',
-        level: 7, hp: 90, max_hp: 90, attack: 12, defense: 4, xpReward: 50, goldReward: 15,
-        drops: [{ itemId: 'sword_t1', chance: 0.02 }, { itemId: 'stone_t1', chance: 0.2 }], zone: 'outskirts'
+        id: 'monkey', // Was goblin_warrior
+        name: 'Jungle Monkey',
+        description: 'A mischievous primate swinging from the trees.',
+        level: 7,
+        hp: 90,
+        max_hp: 90,
+        attack: 12,
+        defense: 4,
+        xpReward: 50,
+        goldReward: 15,
+        drops: [{ itemId: 'sword_t1', chance: 0.02 }, { itemId: 'stone_t1', chance: 0.2 }],
+        zone: 'outskirts',
+        image: '🐒'
     },
     {
         id: 'wolf', name: 'Grey Wolf', description: 'A fierce predator.',

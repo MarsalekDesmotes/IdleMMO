@@ -20,6 +20,7 @@ export function CookingView() {
             description: `Cooking ${rawFishId}...`,
             duration: 5, // Fast action
             staminaCost: 5,
+            costItems: [{ itemId: rawFishId, amount: 1 }],
             rewards: [
                 { type: 'item', itemId: food.id, value: 1 },
                 { type: 'xp', value: food.xp } // Cooking XP

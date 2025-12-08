@@ -1,6 +1,4 @@
-
 import { create } from 'zustand'
-import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 interface FloatingText {

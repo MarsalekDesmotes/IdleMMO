@@ -34,14 +34,16 @@ import { PetView } from "@/features/pets/PetView"
 import { DungeonView } from "@/features/dungeon/DungeonView"
 import { CookingView } from "@/features/skills/CookingView"
 import { EnhancementView } from "@/features/blacksmith/EnhancementView"
+import { CollectionLogView } from "@/features/collection/CollectionLogView"
 import { SettingsView } from "@/features/settings/SettingsView"
 import { OfflineProgressModal } from "@/components/OfflineProgressModal"
 import { Toaster } from "sonner"
 import { FloatingTextManager } from "@/components/game/feedback/FloatingTextManager"
+import { TutorialOverlay } from "@/features/tutorial/TutorialOverlay"
 
 function App() {
   const { user, isGuest, initialize } = useAuthStore()
-  const { character, regenerateStamina, regenerateHp, processAutoResources } = useGameStore()
+  const { character, regenerateStamina, regenerateHp, processAutoResources, saveToCloud } = useGameStore()
   const { checkForEvent } = useEventStore()
   const { currentView } = useUIStore()
 
@@ -62,6 +64,30 @@ function App() {
     }, 1000)
     return () => clearInterval(interval)
   }, [character, regenerateStamina, regenerateHp, checkForEvent, processAutoResources])
+
+  // Auto-Save to Cloud (every 30 seconds)
+  useEffect(() => {
+    if (!character) return
+    const saveInterval = setInterval(() => {
+      saveToCloud()
+    }, 30000)
+    return () => clearInterval(saveInterval)
+  }, [character, saveToCloud])
+
+  // Multi-Tab Detection: Reload if storage changes in another tab
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'nexus-protocol-storage') {
+        // Optional: Show toast before reload
+        import("sonner").then(({ toast }) => {
+          toast.warning("Game updated in another tab. Reloading...", { duration: 2000 })
+        })
+        setTimeout(() => window.location.reload(), 2000)
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   // Level Up Feedback
   useEffect(() => {
@@ -202,6 +228,10 @@ function App() {
               <EnhancementView />
             )}
 
+            {currentView === 'collection' && (
+              <CollectionLogView />
+            )}
+
             {currentView === 'settings' && (
               <SettingsView />
             )}
@@ -211,6 +241,7 @@ function App() {
           <DebugPanel />
           <OfflineProgressModal />
           <FloatingTextManager />
+          <TutorialOverlay />
         </AppShell>
       )}
     </>
